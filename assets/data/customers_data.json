@@ -1,0 +1,181 @@
+{
+  "customers": {
+    "martin-marietta": {
+      "id": "martin-marietta",
+      "name": "Martin Marietta",
+      "logo": "martin_marietta_logo",
+      "color": "#2C3E50",
+      "sites": {
+        "port-of-tampa": {
+          "id": "port-of-tampa",
+          "name": "Port of Tampa",
+          "address": "1001 Channelside Drive",
+          "city": "Tampa",
+          "state": "Florida",
+          "zip": "33602",
+          "latitude": "27.9506",
+          "longitude": "-82.4572",
+          "contactPhone": "(813) 248-1234",
+          "contactEmail": "tampa.port@martinmarietta.com",
+          "hoursOfOperation": "Mon - Fri | 6:00 AM - 4:00 PM",
+          "railwayAccess": true,
+          "products": {
+            "89-granite": {
+              "code": "89-granite",
+              "name": "89 Granite",
+              "description": "High-grade granite aggregate",
+              "category": "Aggregates",
+              "maxCapacity": 60000,
+              "unit": "tonnes",
+              "pricePerUnit": 50,
+              "criticalLevel": 10
+            },
+            "ac-blend": {
+              "code": "ac-blend", 
+              "name": "AC Blend",
+              "description": "Asphalt concrete blend aggregate",
+              "category": "Aggregates",
+              "maxCapacity": 30000,
+              "unit": "tonnes", 
+              "pricePerUnit": 30,
+              "criticalLevel": 10
+            },
+            "limestone-57": {
+              "code": "limestone-57",
+              "name": "Lime Stone 57",
+              "description": "57 grade limestone aggregate",
+              "category": "Aggregates",
+              "maxCapacity": 15000,
+              "unit": "tonnes",
+              "pricePerUnit": 55,
+              "criticalLevel": 10
+            },
+            "limestone-89": {
+              "code": "limestone-89",
+              "name": "Lime Stone 89", 
+              "description": "89 grade limestone aggregate",
+              "category": "Aggregates",
+              "maxCapacity": 15000,
+              "unit": "tonnes",
+              "pricePerUnit": 45,
+              "criticalLevel": 10
+            },
+            "limestone-block-screening": {
+              "code": "limestone-block-screening",
+              "name": "Lime Stone Block Screening",
+              "description": "Limestone block screening material",
+              "category": "Aggregates", 
+              "maxCapacity": 10000,
+              "unit": "tonnes",
+              "pricePerUnit": 40,
+              "criticalLevel": 10
+            }
+          }
+        },
+        "fort-myers": {
+          "id": "fort-myers",
+          "name": "Fort Myers",
+          "address": "2500 Colonial Blvd",
+          "city": "Fort Myers",
+          "state": "Florida", 
+          "zip": "33907",
+          "latitude": "26.5628",
+          "longitude": "-81.8723",
+          "contactPhone": "(239) 275-5678",
+          "contactEmail": "fortmyers@martinmarietta.com",
+          "hoursOfOperation": "Mon - Fri | 5:30 AM - 3:30 PM",
+          "railwayAccess": false,
+          "products": {
+            "89-granite": {
+              "code": "89-granite",
+              "name": "89 Granite",
+              "description": "High-grade granite aggregate",
+              "category": "Aggregates",
+              "maxCapacity": 45000,
+              "unit": "tonnes",
+              "pricePerUnit": 52,
+              "criticalLevel": 10
+            },
+            "ac-blend": {
+              "code": "ac-blend",
+              "name": "AC Blend", 
+              "description": "Asphalt concrete blend aggregate",
+              "category": "Aggregates",
+              "maxCapacity": 25000,
+              "unit": "tonnes",
+              "pricePerUnit": 32,
+              "criticalLevel": 10
+            }
+          }
+        },
+        "loughman-rail-yard": {
+          "id": "loughman-rail-yard",
+          "name": "Loughman Rail Yard",
+          "address": "3850 Loughman Ocoee Rd",
+          "city": "Loughman", 
+          "state": "Florida",
+          "zip": "33858",
+          "latitude": "28.2394",
+          "longitude": "-81.5669",
+          "contactPhone": "(863) 424-9876",
+          "contactEmail": "loughman@martinmarietta.com",
+          "hoursOfOperation": "Mon - Fri | 6:00 AM - 4:00 PM",
+          "railwayAccess": true,
+          "products": {
+            "limestone-57": {
+              "code": "limestone-57",
+              "name": "Lime Stone 57",
+              "description": "57 grade limestone aggregate",
+              "category": "Aggregates",
+              "maxCapacity": 20000,
+              "unit": "tonnes",
+              "pricePerUnit": 53,
+              "criticalLevel": 10
+            },
+            "limestone-89": {
+              "code": "limestone-89",
+              "name": "Lime Stone 89",
+              "description": "89 grade limestone aggregate", 
+              "category": "Aggregates",
+              "maxCapacity": 18000,
+              "unit": "tonnes",
+              "pricePerUnit": 47,
+              "criticalLevel": 10
+            }
+          }
+        }
+      }
+    }
+  },
+  "userRoles": {
+    "sales-manager": {
+      "name": "Sales Manager",
+      "permissions": {
+        "viewAllSites": true,
+        "editPrices": true,
+        "viewReports": true,
+        "manageSalesPeople": true
+      },
+      "visibleCustomers": ["martin-marietta"]
+    },
+    "sales-person": {
+      "name": "Sales Person", 
+      "permissions": {
+        "viewAllSites": false,
+        "editPrices": false,
+        "viewReports": false,
+        "manageSalesPeople": false
+      },
+      "visibleCustomers": [],
+      "visibleSites": []
+    }
+  },
+  "metadata": {
+    "description": "Multi-customer facility and product data for sales application",
+    "version": "1.0",
+    "lastUpdated": "2025-08-27",
+    "totalCustomers": 1,
+    "totalSites": 3,
+    "criticalThreshold": 10
+  }
+}

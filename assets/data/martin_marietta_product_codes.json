@@ -1,0 +1,275 @@
+{
+  "metadata": {
+    "description": "Martin Marietta product codes mapping",
+    "source": "Inferred from facility data analysis",
+    "totalCodes": 25,
+    "disclaimer": "This mapping is inferred from data patterns. Contact facilities directly for exact specifications."
+  },
+  "categories": {
+    "Aggregates": [
+      "1088",
+      "1111",
+      "1091",
+      "1090",
+      "1112",
+      "1113",
+      "1151",
+      "1155"
+    ],
+    "Ready Mixed Concrete": [
+      "1089",
+      "1538",
+      "1812",
+      "2060",
+      "2059"
+    ],
+    "Asphalt": [
+      "1109",
+      "1115",
+      "1411",
+      "1116",
+      "1429",
+      "2772",
+      "2773",
+      "2774"
+    ],
+    "Magnesia": [
+      "2447",
+      "2476",
+      "2477",
+      "2478"
+    ]
+  },
+  "productCodes": {
+    "1088": {
+      "category": "Aggregates",
+      "description": "Stone/Rock Aggregate (Base material)",
+      "frequency": 358,
+      "notes": "Most common aggregate code, likely base stone"
+    },
+    "1111": {
+      "category": "Aggregates",
+      "description": "Crushed Stone/Gravel",
+      "frequency": 318,
+      "notes": "Very common in aggregate facilities, likely crushed stone"
+    },
+    "1091": {
+      "category": "Aggregates",
+      "description": "Fine Aggregate/Sand",
+      "frequency": 318,
+      "notes": "Common aggregate material, likely sand or fine aggregate"
+    },
+    "1090": {
+      "category": "Aggregates",
+      "description": "Coarse Aggregate",
+      "frequency": 277,
+      "notes": "Common in aggregates, likely coarse aggregate material"
+    },
+    "1112": {
+      "category": "Aggregates",
+      "description": "Specialty Stone/Fill Material",
+      "frequency": 198,
+      "notes": "Secondary aggregate type, possibly specialty stone or fill"
+    },
+    "1113": {
+      "category": "Aggregates",
+      "description": "Road Base/Construction Aggregate",
+      "frequency": 84,
+      "notes": "Less common aggregate, possibly road base material"
+    },
+    "1151": {
+      "category": "Aggregates",
+      "description": "Premium Aggregate",
+      "frequency": 30,
+      "notes": "Lower frequency, possibly premium or specialty aggregate"
+    },
+    "1155": {
+      "category": "Aggregates",
+      "description": "Architectural Stone",
+      "frequency": 36,
+      "notes": "Specialty aggregate, possibly architectural stone"
+    },
+    "1089": {
+      "category": "Ready Mixed Concrete",
+      "description": "Standard Concrete Mix",
+      "frequency": 76,
+      "notes": "Most common RMC code, likely standard concrete mix"
+    },
+    "1538": {
+      "category": "Ready Mixed Concrete",
+      "description": "High Strength Concrete",
+      "frequency": 75,
+      "notes": "Common in RMC facilities, possibly high-strength mix"
+    },
+    "1812": {
+      "category": "Ready Mixed Concrete",
+      "description": "Structural Concrete",
+      "frequency": 73,
+      "notes": "Standard in RMC facilities, likely structural concrete"
+    },
+    "2060": {
+      "category": "Ready Mixed Concrete",
+      "description": "Commercial Grade Concrete",
+      "frequency": 73,
+      "notes": "Common RMC product, possibly commercial grade"
+    },
+    "2059": {
+      "category": "Ready Mixed Concrete",
+      "description": "Residential Concrete Mix",
+      "frequency": 73,
+      "notes": "Standard RMC product, possibly residential grade"
+    },
+    "1109": {
+      "category": "Asphalt",
+      "description": "Hot Mix Asphalt",
+      "frequency": 40,
+      "notes": "Primary asphalt code, likely hot mix asphalt"
+    },
+    "1115": {
+      "category": "Asphalt",
+      "description": "Asphalt Paving Mix",
+      "frequency": 37,
+      "notes": "Common in asphalt facilities, likely paving mix"
+    },
+    "1411": {
+      "category": "Asphalt",
+      "description": "Surface Course Asphalt",
+      "frequency": 32,
+      "notes": "Asphalt product, possibly surface course material"
+    },
+    "1116": {
+      "category": "Asphalt",
+      "description": "Base Course Asphalt",
+      "frequency": 32,
+      "notes": "Standard asphalt product, possibly base course"
+    },
+    "1429": {
+      "category": "Asphalt",
+      "description": "Specialty Asphalt Mix",
+      "frequency": 32,
+      "notes": "Asphalt product, possibly specialty or modified mix"
+    },
+    "2447": {
+      "category": "Magnesia",
+      "description": "Dead Burned Magnesia",
+      "frequency": 13,
+      "notes": "Magnesia product, likely dead burned magnesia"
+    },
+    "2476": {
+      "category": "Magnesia",
+      "description": "Caustic Calcined Magnesia",
+      "frequency": 10,
+      "notes": "Magnesia product, likely caustic calcined type"
+    },
+    "2477": {
+      "category": "Magnesia",
+      "description": "Seawater Magnesia",
+      "frequency": 10,
+      "notes": "Specialized magnesia product"
+    },
+    "2478": {
+      "category": "Magnesia",
+      "description": "High Purity Magnesia",
+      "frequency": 12,
+      "notes": "Premium magnesia product"
+    },
+    "2772": {
+      "category": "Asphalt",
+      "description": "Modified Asphalt",
+      "frequency": 2,
+      "notes": "Specialty asphalt product"
+    },
+    "2773": {
+      "category": "Asphalt",
+      "description": "Polymer Modified Asphalt",
+      "frequency": 2,
+      "notes": "Advanced asphalt product"
+    },
+    "2774": {
+      "category": "Asphalt",
+      "description": "Superpave Asphalt",
+      "frequency": 2,
+      "notes": "High performance asphalt mix"
+    }
+  },
+  "analysisData": {
+    "Aggregates": {
+      "1088": 353,
+      "1111": 313,
+      "1090": 272,
+      "1091": 313,
+      "1112": 194,
+      "1113": 81,
+      "1151": 30,
+      "1155": 34,
+      "1894": 2,
+      "1140": 6,
+      "1109": 5,
+      "1115": 4,
+      "1153": 8,
+      "2447": 10,
+      "2476": 10,
+      "2477": 10,
+      "2478": 10,
+      "1152": 5,
+      "1089": 3,
+      "1538": 3,
+      "1812": 1,
+      "2059": 1,
+      "2060": 1,
+      "1155 ": 1
+    },
+    "Ready Mixed Concrete": {
+      "1089": 73,
+      "1538": 72,
+      "1812": 72,
+      "2060": 72,
+      "2059": 72,
+      "1088": 2,
+      "1111": 2,
+      "1090": 2,
+      "1112": 2,
+      "1113": 2,
+      "1091": 2
+    },
+    "Asphalt": {
+      "1109": 34,
+      "1115": 32,
+      "1411": 31,
+      "1116": 31,
+      "1429": 31,
+      "1088": 2,
+      "1111": 2,
+      "1090": 2,
+      "1091": 2,
+      "1112": 1,
+      "1155": 1,
+      "2772": 2,
+      "2773": 2,
+      "2774": 2
+    },
+    "Magnesia": {},
+    "Cement": {
+      "1110": 5,
+      "1537": 5,
+      "1582": 5,
+      "2133": 5,
+      "2132": 1,
+      "2134": 1,
+      "2137": 1
+    },
+    "Cement Treated Materials": {
+      "1088": 1,
+      "1111": 1,
+      "1090": 1,
+      "1091": 1,
+      "1112": 1,
+      "1113": 1,
+      "1155": 1,
+      "2447": 3,
+      "2476": 1,
+      "2477": 1,
+      "2478": 2
+    }
+  }
+}

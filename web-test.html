@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quvo Sales Dashboard - Web Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #f8f9fa;
+            color: #2c3e50;
+        }
+
+        .header {
+            background-color: #2c3e50;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            opacity: 0.8;
+            font-size: 14px;
+        }
+
+        .status {
+            background: white;
+            margin: 16px;
+            padding: 16px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .loading {
+            color: #3498db;
+        }
+
+        .success {
+            color: #27ae60;
+        }
+
+        .error {
+            color: #e74c3c;
+        }
+
+        .stats {
+            display: flex;
+            background: white;
+            margin: 16px;
+            padding: 16px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .stat-card {
+            flex: 1;
+            text-align: center;
+            padding: 0 16px;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #7f8c8d;
+            margin-top: 4px;
+        }
+
+        .bay-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 16px;
+            margin: 16px;
+        }
+
+        .bay-card {
+            background: white;
+            border-radius: 12px;
+            padding: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .bay-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .bay-name {
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: bold;
+            color: white;
+        }
+
+        .status-nearly-full { background-color: #e74c3c; }
+        .status-high { background-color: #f39c12; }
+        .status-available { background-color: #27ae60; }
+        .status-low { background-color: #95a5a6; }
+
+        .volume-info {
+            margin-bottom: 12px;
+        }
+
+        .volume-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .capacity-text {
+            font-size: 12px;
+            color: #7f8c8d;
+            margin-top: 2px;
+        }
+
+        .progress-bar {
+            height: 8px;
+            background-color: #ecf0f1;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 12px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+
+        .bay-footer {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            color: #7f8c8d;
+            margin-top: 8px;
+        }
+
+        .refresh-btn {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            margin: 16px;
+            display: block;
+            width: calc(100% - 32px);
+        }
+
+        .refresh-btn:hover {
+            background-color: #2980b9;
+        }
+
+        .refresh-btn:disabled {
+            background-color: #bdc3c7;
+            cursor: not-allowed;
+        }
+
+        @media (max-width: 768px) {
+            .stats {
+                flex-direction: column;
+                gap: 16px;
+            }
+            
+            .bay-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>QUVO Sales Dashboard</h1>
+        <p>Real-time Bay Monitoring • Web Demo</p>
+    </div>
+
+    <div id="status" class="status loading">
+        🔍 Connecting to Quvo API...
+    </div>
+
+    <div id="stats" class="stats" style="display: none;">
+        <div class="stat-card">
+            <div id="total-bays" class="stat-value">-</div>
+            <div class="stat-label">Active Bays</div>
+        </div>
+        <div class="stat-card">
+            <div id="total-volume" class="stat-value">-</div>
+            <div class="stat-label">Total Volume</div>
+        </div>
+        <div class="stat-card">
+            <div id="avg-utilization" class="stat-value">-</div>
+            <div class="stat-label">Avg Utilization</div>
+        </div>
+    </div>
+
+    <button id="refresh-btn" class="refresh-btn" onclick="loadData()">
+        🔄 Refresh Data
+    </button>
+
+    <div id="bay-grid" class="bay-grid"></div>
+
+    <script>
+        const API_BASE_URL = 'https://cireco.sachtlebentechnology.com/api/v1';
+        let sessionCookie = '';
+
+        // Format volume for display
+        function formatVolume(volume) {
+            if (volume >= 1000000) return `${(volume / 1000000).toFixed(1)}M`;
+            if (volume >= 1000) return `${(volume / 1000).toFixed(1)}K`;
+            return volume.toFixed(0);
+        }
+
+        // Get status info based on utilization
+        function getStatusInfo(utilization) {
+            if (utilization >= 90) return { text: 'NEARLY FULL', class: 'status-nearly-full' };
+            if (utilization >= 70) return { text: 'HIGH', class: 'status-high' };
+            if (utilization >= 30) return { text: 'AVAILABLE', class: 'status-available' };
+            return { text: 'LOW STOCK', class: 'status-low' };
+        }
+
+        // Format date for display
+        function formatDate(dateStr) {
+            if (!dateStr) return 'No data';
+            try {
+                const [datePart, timePart] = dateStr.split(' ');
+                const [year, month, day] = datePart.split('.');
+                const [hour, minute] = timePart.split(':');
+                
+                const date = new Date(year, month - 1, day, hour, minute);
+                const now = new Date();
+                const diffMs = now - date;
+                const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+                const diffDays = Math.floor(diffHours / 24);
+                
+                if (diffDays > 0) return `${diffDays}d ago`;
+                if (diffHours > 0) return `${diffHours}h ago`;
+                return 'Recent';
+            } catch (error) {
+                return dateStr.slice(0, 10);
+            }
+        }
+
+        // Login to API
+        async function login() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: 'Allan.kane',
+                        password: 'Allan1234!'
+                    })
+                });
+
+                if (!response.ok) throw new Error('Login failed');
+
+                // Capture session cookies
+                const setCookie = response.headers.get('set-cookie');
+                if (setCookie) {
+                    sessionCookie = setCookie.split(';')[0];
+                }
+
+                const data = await response.json();
+                return data;
+            } catch (error) {
+                throw new Error('Authentication failed: ' + error.message);
+            }
+        }
+
+        // Get dashboard data
+        async function getDashboard() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/dashboard/initial-fetch`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'Cookie': sessionCookie
+                    }
+                });
+
+                if (!response.ok) throw new Error('Dashboard request failed');
+
+                const data = await response.json();
+                return data;
+            } catch (error) {
+                throw new Error('Dashboard failed: ' + error.message);
+            }
+        }
+
+        // Render bay cards
+        function renderBays(records, storages) {
+            const bayGrid = document.getElementById('bay-grid');
+            bayGrid.innerHTML = '';
+
+            // Sort by bay name and take first 20 for demo
+            const sortedRecords = Object.values(records)
+                .sort((a, b) => a.name.localeCompare(b.name))
+                .slice(0, 20);
+
+            sortedRecords.forEach(record => {
+                const storage = storages[record.storageId] || { maxVolume: 1000 };
+                const volume = parseFloat(record.volume || 0);
+                const maxVolume = parseFloat(storage.maxVolume || 1000);
+                const utilization = Math.min((volume / maxVolume) * 100, 100);
+                const status = getStatusInfo(utilization);
+
+                const bayCard = document.createElement('div');
+                bayCard.className = 'bay-card';
+                bayCard.innerHTML = `
+                    <div class="bay-header">
+                        <div class="bay-name">${record.name}</div>
+                        <div class="status-badge ${status.class}">${status.text}</div>
+                    </div>
+                    <div class="volume-info">
+                        <div class="volume-value">${formatVolume(volume)} units</div>
+                        <div class="capacity-text">
+                            of ${formatVolume(maxVolume)} max (${utilization.toFixed(1)}% full)
+                        </div>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill ${status.class}" 
+                             style="width: ${Math.max(utilization, 2)}%"></div>
+                    </div>
+                    <div class="bay-footer">
+                        <div><strong>Material:</strong> ${record.material || 'Unknown'}</div>
+                        <div><strong>Updated:</strong> ${formatDate(record.datetime)}</div>
+                    </div>
+                `;
+                bayGrid.appendChild(bayCard);
+            });
+        }
+
+        // Update stats
+        function updateStats(records, storages) {
+            const recordsArray = Object.values(records);
+            const totalVolume = recordsArray.reduce((sum, record) => 
+                sum + parseFloat(record.volume || 0), 0
+            );
+            
+            const avgUtilization = recordsArray.reduce((sum, record) => {
+                const storage = storages[record.storageId] || { maxVolume: 1000 };
+                const volume = parseFloat(record.volume || 0);
+                const maxVolume = parseFloat(storage.maxVolume || 1000);
+                return sum + (volume / maxVolume) * 100;
+            }, 0) / recordsArray.length;
+
+            document.getElementById('total-bays').textContent = recordsArray.length;
+            document.getElementById('total-volume').textContent = formatVolume(totalVolume);
+            document.getElementById('avg-utilization').textContent = avgUtilization.toFixed(1) + '%';
+            document.getElementById('stats').style.display = 'flex';
+        }
+
+        // Load data
+        async function loadData() {
+            const statusEl = document.getElementById('status');
+            const refreshBtn = document.getElementById('refresh-btn');
+            
+            try {
+                refreshBtn.disabled = true;
+                statusEl.className = 'status loading';
+                statusEl.innerHTML = '🔍 Connecting to Quvo API...';
+
+                // Login
+                await login();
+                statusEl.innerHTML = '✅ Authenticated • Loading bay data...';
+
+                // Get dashboard
+                const dashboardData = await getDashboard();
+                
+                if (dashboardData.recordsById) {
+                    statusEl.className = 'status success';
+                    statusEl.innerHTML = `✅ Connected • Showing ${Object.keys(dashboardData.recordsById).length} bays • Last updated: ${new Date().toLocaleTimeString()}`;
+                    
+                    updateStats(dashboardData.recordsById, dashboardData.storagesById || {});
+                    renderBays(dashboardData.recordsById, dashboardData.storagesById || {});
+                } else {
+                    throw new Error('No bay data received');
+                }
+
+            } catch (error) {
+                statusEl.className = 'status error';
+                statusEl.innerHTML = `❌ Error: ${error.message}`;
+                console.error('Load failed:', error);
+            } finally {
+                refreshBtn.disabled = false;
+            }
+        }
+
+        // Load data on page load
+        window.addEventListener('load', loadData);
+    </script>
+</body>
+</html>
