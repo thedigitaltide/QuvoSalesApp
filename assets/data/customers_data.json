@@ -6,140 +6,150 @@
       "logo": "martin_marietta_logo",
       "color": "#2C3E50",
       "sites": {
-        "port-of-tampa": {
-          "id": "port-of-tampa",
-          "name": "Port of Tampa",
-          "address": "1001 Channelside Drive",
+        "tampa-yard": {
+          "id": "tampa-yard",
+          "name": "Tampa Yard",
+          "address": "4101 Maritime Boulevard",
           "city": "Tampa",
           "state": "Florida",
-          "zip": "33602",
-          "latitude": "27.9506",
-          "longitude": "-82.4572",
-          "contactPhone": "(813) 248-1234",
-          "contactEmail": "tampa.port@martinmarietta.com",
-          "hoursOfOperation": "Mon - Fri | 6:00 AM - 4:00 PM",
-          "railwayAccess": true,
+          "zip": "33605",
+          "latitude": "27.912993",
+          "longitude": "-82.438939",
+          "contactPhone": "(813) 261-1764",
+          "contactEmail": "Drew.Shedd@martinmarietta.com",
+          "hoursOfOperation": "Mon - Fri | 5:00 AM - 3:00 PM",
+          "railwayAccess": false,
           "products": {
-            "89-granite": {
-              "code": "89-granite",
-              "name": "89 Granite",
-              "description": "High-grade granite aggregate",
+            "1088": {
+              "code": "1088",
+              "name": "Stone/Rock Aggregate",
+              "description": "Base material stone aggregate",
               "category": "Aggregates",
               "maxCapacity": 60000,
-              "unit": "tonnes",
-              "pricePerUnit": 50,
-              "criticalLevel": 10
-            },
-            "ac-blend": {
-              "code": "ac-blend", 
-              "name": "AC Blend",
-              "description": "Asphalt concrete blend aggregate",
-              "category": "Aggregates",
-              "maxCapacity": 30000,
-              "unit": "tonnes", 
-              "pricePerUnit": 30,
-              "criticalLevel": 10
-            },
-            "limestone-57": {
-              "code": "limestone-57",
-              "name": "Lime Stone 57",
-              "description": "57 grade limestone aggregate",
-              "category": "Aggregates",
-              "maxCapacity": 15000,
-              "unit": "tonnes",
-              "pricePerUnit": 55,
-              "criticalLevel": 10
-            },
-            "limestone-89": {
-              "code": "limestone-89",
-              "name": "Lime Stone 89", 
-              "description": "89 grade limestone aggregate",
-              "category": "Aggregates",
-              "maxCapacity": 15000,
               "unit": "tonnes",
               "pricePerUnit": 45,
               "criticalLevel": 10
             },
-            "limestone-block-screening": {
-              "code": "limestone-block-screening",
-              "name": "Lime Stone Block Screening",
-              "description": "Limestone block screening material",
-              "category": "Aggregates", 
-              "maxCapacity": 10000,
+            "1111": {
+              "code": "1111", 
+              "name": "Crushed Stone/Gravel",
+              "description": "Standard crushed stone and gravel",
+              "category": "Aggregates",
+              "maxCapacity": 40000,
+              "unit": "tonnes", 
+              "pricePerUnit": 42,
+              "criticalLevel": 10
+            },
+            "1091": {
+              "code": "1091",
+              "name": "Fine Aggregate/Sand",
+              "description": "Sand and fine aggregate materials",
+              "category": "Aggregates",
+              "maxCapacity": 25000,
+              "unit": "tonnes",
+              "pricePerUnit": 38,
+              "criticalLevel": 10
+            },
+            "1090": {
+              "code": "1090",
+              "name": "Coarse Aggregate", 
+              "description": "Coarse aggregate materials",
+              "category": "Aggregates",
+              "maxCapacity": 35000,
               "unit": "tonnes",
               "pricePerUnit": 40,
               "criticalLevel": 10
             }
           }
         },
-        "fort-myers": {
-          "id": "fort-myers",
-          "name": "Fort Myers",
-          "address": "2500 Colonial Blvd",
+        "fort-myers-quarry": {
+          "id": "fort-myers-quarry",
+          "name": "Fort Myers Quarry",
+          "address": "15401 Alico Road",
           "city": "Fort Myers",
           "state": "Florida", 
-          "zip": "33907",
-          "latitude": "26.5628",
-          "longitude": "-81.8723",
-          "contactPhone": "(239) 275-5678",
-          "contactEmail": "fortmyers@martinmarietta.com",
-          "hoursOfOperation": "Mon - Fri | 5:30 AM - 3:30 PM",
+          "zip": "33913",
+          "latitude": "26.47574",
+          "longitude": "-81.70902",
+          "contactPhone": "(239) 267-6000",
+          "contactEmail": "Drew.Shedd@martinmarietta.com",
+          "hoursOfOperation": "Mon - Fri | 4:00 AM - 4:00 PM",
           "railwayAccess": false,
           "products": {
-            "89-granite": {
-              "code": "89-granite",
-              "name": "89 Granite",
-              "description": "High-grade granite aggregate",
+            "1088": {
+              "code": "1088",
+              "name": "Stone/Rock Aggregate",
+              "description": "Base material stone aggregate",
               "category": "Aggregates",
-              "maxCapacity": 45000,
+              "maxCapacity": 80000,
               "unit": "tonnes",
-              "pricePerUnit": 52,
+              "pricePerUnit": 47,
               "criticalLevel": 10
             },
-            "ac-blend": {
-              "code": "ac-blend",
-              "name": "AC Blend", 
-              "description": "Asphalt concrete blend aggregate",
+            "1111": {
+              "code": "1111",
+              "name": "Crushed Stone/Gravel", 
+              "description": "Standard crushed stone and gravel",
               "category": "Aggregates",
-              "maxCapacity": 25000,
+              "maxCapacity": 50000,
               "unit": "tonnes",
-              "pricePerUnit": 32,
+              "pricePerUnit": 44,
+              "criticalLevel": 10
+            },
+            "1112": {
+              "code": "1112",
+              "name": "Specialty Stone/Fill",
+              "description": "Specialty stone and fill material",
+              "category": "Aggregates",
+              "maxCapacity": 30000,
+              "unit": "tonnes",
+              "pricePerUnit": 52,
               "criticalLevel": 10
             }
           }
         },
-        "loughman-rail-yard": {
-          "id": "loughman-rail-yard",
-          "name": "Loughman Rail Yard",
-          "address": "3850 Loughman Ocoee Rd",
-          "city": "Loughman", 
+        "mulberry-yard": {
+          "id": "mulberry-yard",
+          "name": "Mulberry Yard",
+          "address": "1250 Prairie Mine Road",
+          "city": "Mulberry", 
           "state": "Florida",
-          "zip": "33858",
-          "latitude": "28.2394",
-          "longitude": "-81.5669",
-          "contactPhone": "(863) 424-9876",
-          "contactEmail": "loughman@martinmarietta.com",
-          "hoursOfOperation": "Mon - Fri | 6:00 AM - 4:00 PM",
+          "zip": "33860",
+          "latitude": "27.905996",
+          "longitude": "-81.986117",
+          "contactPhone": "(863) 844-5671",
+          "contactEmail": "Drew.Shedd@martinmarietta.com",
+          "hoursOfOperation": "Mon - Fri | 6:00 AM - 3:00 PM",
           "railwayAccess": true,
           "products": {
-            "limestone-57": {
-              "code": "limestone-57",
-              "name": "Lime Stone 57",
-              "description": "57 grade limestone aggregate",
+            "1088": {
+              "code": "1088",
+              "name": "Stone/Rock Aggregate",
+              "description": "Base material stone aggregate",
               "category": "Aggregates",
-              "maxCapacity": 20000,
+              "maxCapacity": 45000,
               "unit": "tonnes",
-              "pricePerUnit": 53,
+              "pricePerUnit": 46,
               "criticalLevel": 10
             },
-            "limestone-89": {
-              "code": "limestone-89",
-              "name": "Lime Stone 89",
-              "description": "89 grade limestone aggregate", 
+            "1111": {
+              "code": "1111",
+              "name": "Crushed Stone/Gravel",
+              "description": "Standard crushed stone and gravel", 
               "category": "Aggregates",
-              "maxCapacity": 18000,
+              "maxCapacity": 35000,
               "unit": "tonnes",
-              "pricePerUnit": 47,
+              "pricePerUnit": 43,
+              "criticalLevel": 10
+            },
+            "1155": {
+              "code": "1155",
+              "name": "Architectural Stone",
+              "description": "Premium architectural stone materials",
+              "category": "Aggregates",
+              "maxCapacity": 15000,
+              "unit": "tonnes",
+              "pricePerUnit": 65,
               "criticalLevel": 10
             }
           }
