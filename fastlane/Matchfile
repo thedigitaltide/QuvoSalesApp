@@ -1,0 +1,38 @@
+# Complete Apple Developer Certificate Management with Fastlane Match
+# This configuration handles all certificate types for multiple apps
+
+git_url("git@github.com:thedigitaltide/ios-certificates.git")
+storage_mode("git")
+
+# Default certificate type
+type("development") # Can be overridden per lane
+
+# App identifiers for all your apps (add more as needed)
+app_identifier("com.digitaltide.quvosalesapp")
+
+# Team configuration - will be set from environment
+team_id(ENV["FASTLANE_TEAM_ID"])
+username(ENV["FASTLANE_USER"])
+
+# Git configuration for certificate repo
+git_branch("main")
+shallow_clone(false)
+
+# Use system keychain for local development
+# keychain_name("fastlane_certificates")
+# keychain_password(ENV["MATCH_KEYCHAIN_PASSWORD"] || "fastlane-match-keychain")
+
+# Certificate generation settings
+generate_apple_certs(true)
+skip_confirmation(false)
+force_for_new_devices(true)
+skip_docs(false)
+
+# Platform support
+platform("ios")
+
+# Verbose output for debugging
+verbose(true)
+
+# Template email for certificate notifications
+template_name("Default")

@@ -1,0 +1,520 @@
+# This file contains the fastlane.tools configuration
+# You can find the documentation at https://docs.fastlane.tools
+#
+# For a list of all available actions, check out
+#
+#     https://docs.fastlane.tools/actions
+#
+# For a list of all available plugins, check out
+#
+#     https://docs.fastlane.tools/plugins/available-plugins
+#
+
+# Uncomment the line if you want fastlane to automatically update itself
+# update_fastlane
+
+default_platform(:ios)
+
+platform :ios do
+  desc "Build and deploy QuvoSalesApp to Digital Tide demo"
+  lane :deploy_demo do |options|
+    # Ensure we're in the right directory
+    Dir.chdir("../ios") do
+      # Clean build directory
+      clear_derived_data(derived_data_path: "~/Library/Developer/Xcode/DerivedData")
+      
+      # Install CocoaPods dependencies
+      cocoapods(clean_install: true, use_bundle_exec: false)
+      
+      # Build the React Native bundle
+      sh("cd .. && npx react-native bundle --platform ios --dev false --entry-file index.js --bundle-output ios/main.jsbundle")
+      
+      # Increment build number for demo releases
+      increment_build_number(
+        xcodeproj: "QuvoSalesApp.xcodeproj",
+        build_number: latest_testflight_build_number + 1
+      )
+      
+      # Build for iOS
+      build_app(
+        scheme: "QuvoSalesApp",
+        workspace: "QuvoSalesApp.xcworkspace",
+        configuration: "Release",
+        export_method: "ad-hoc",
+        output_directory: "../fastlane/builds",
+        output_name: "QuvoSalesApp-#{Time.now.strftime('%Y%m%d-%H%M%S')}.ipa",
+        clean: true,
+        include_bitcode: false,
+        include_symbols: true,
+        export_options: {
+          method: "ad-hoc",
+          provisioningProfiles: {
+            "com.digitaltide.quvosalesapp" => "Digital Tide Demo Provisioning Profile"
+          }
+        }
+      )
+    end
+    
+    # Upload to Digital Tide demo platform
+    upload_to_digital_tide(
+      api_token: ENV["DIGITAL_TIDE_API_TOKEN"],
+      app_id: ENV["DIGITAL_TIDE_APP_ID"] || "quvo-sales-app",
+      build_path: lane_context[SharedValues::IPA_OUTPUT_PATH],
+      release_notes: generate_release_notes,
+      version: get_version_number(xcodeproj: "./QuvoSalesApp.xcodeproj"),
+      build_number: get_build_number(xcodeproj: "./QuvoSalesApp.xcodeproj")
+    )
+    
+    # Send notification
+    slack(
+      message: "QuvoSalesApp successfully deployed to Digital Tide demo! 🚀",
+      channel: "#deployments",
+      username: "Fastlane",
+      icon_url: "https://fastlane.tools/assets/img/fastlane_icon.png"
+    ) if ENV["SLACK_URL"]
+    
+    UI.success("✅ QuvoSalesApp deployed to Digital Tide demo successfully!")
+  end
+  
+  desc "Build for development testing"
+  lane :build_dev do
+    Dir.chdir("../ios") do
+      # Install CocoaPods dependencies
+      cocoapods(use_bundle_exec: false)
+      
+      # Build the React Native bundle for development
+      sh("cd .. && npx react-native bundle --platform ios --dev false --entry-file index.js --bundle-output ios/main.jsbundle")
+      
+      # Build for iOS
+      build_app(
+        scheme: "QuvoSalesApp",
+        workspace: "QuvoSalesApp.xcworkspace",
+        configuration: "Debug",
+        export_method: "development",
+        output_directory: "../fastlane/builds",
+        output_name: "QuvoSalesApp-dev.ipa",
+        clean: true
+      )
+    end
+    
+    UI.success("✅ Development build completed!")
+  end
+  
+  desc "Complete certificate and provisioning profile setup for all apps"
+  lane :setup_certificates do |options|
+    setup_keychain
+    
+    UI.header("🔐 Setting up certificates for all environments...")
+    
+    # Development certificates (for local development and debugging)
+    UI.message("📱 Setting up Development certificates...")
+    match(
+      type: "development",
+      app_identifier: "com.digitaltide.quvosalesapp",
+      readonly: options[:readonly] || false,
+      force_for_new_devices: true
+    )
+    
+    # Ad-hoc certificates (for testing with specific devices)
+    UI.message("🧪 Setting up Ad-Hoc certificates...")
+    match(
+      type: "adhoc",
+      app_identifier: "com.digitaltide.quvosalesapp",
+      readonly: options[:readonly] || false,
+      force_for_new_devices: true
+    )
+    
+    # App Store certificates (for TestFlight and App Store distribution)
+    UI.message("🏪 Setting up App Store certificates...")
+    match(
+      type: "appstore",
+      app_identifier: "com.digitaltide.quvosalesapp",
+      readonly: options[:readonly] || false,
+      force_for_new_devices: true
+    )
+    
+    UI.success("✅ All certificates and provisioning profiles are ready!")
+  end
+  
+  desc "Setup certificates for a new app (provide app_identifier)"
+  lane :setup_new_app do |options|
+    app_id = options[:app_identifier]
+    
+    if app_id.nil?
+      UI.user_error!("Please provide app_identifier: fastlane ios setup_new_app app_identifier:com.your.app")
+    end
+    
+    setup_keychain
+    
+    UI.header("🆕 Setting up certificates for new app: #{app_id}")
+    
+    ["development", "adhoc", "appstore"].each do |cert_type|
+      UI.message("Setting up #{cert_type} certificate for #{app_id}...")
+      match(
+        type: cert_type,
+        app_identifier: app_id,
+        readonly: false,
+        force_for_new_devices: true
+      )
+    end
+    
+    UI.success("✅ New app #{app_id} certificates are ready!")
+  end
+  
+  desc "Add new device UDID and update provisioning profiles"
+  lane :add_device do |options|
+    device_name = options[:name]
+    device_udid = options[:udid]
+    
+    if device_name.nil? || device_udid.nil?
+      UI.user_error!("Usage: fastlane ios add_device name:'Device Name' udid:'DEVICE_UDID'")
+    end
+    
+    # Register the device
+    register_devices(
+      devices: {
+        device_name => device_udid
+      }
+    )
+    
+    # Update all development and ad-hoc profiles
+    setup_keychain
+    
+    UI.message("📱 Updating development profiles with new device...")
+    match(
+      type: "development",
+      force_for_new_devices: true,
+      readonly: false
+    )
+    
+    UI.message("🧪 Updating ad-hoc profiles with new device...")
+    match(
+      type: "adhoc", 
+      force_for_new_devices: true,
+      readonly: false
+    )
+    
+    UI.success("✅ Device '#{device_name}' added and profiles updated!")
+  end
+  
+  desc "Refresh all certificates (use when expired or need updates)"
+  lane :refresh_certificates do
+    setup_keychain
+    
+    UI.header("🔄 Refreshing all certificates and profiles...")
+    
+    # Force refresh all certificate types
+    ["development", "adhoc", "appstore"].each do |cert_type|
+      UI.message("Refreshing #{cert_type} certificates...")
+      match(
+        type: cert_type,
+        readonly: false,
+        force_for_new_devices: true,
+        skip_confirmation: true
+      )
+    end
+    
+    UI.success("✅ All certificates refreshed!")
+  end
+  
+  desc "Run tests"
+  lane :test do
+    Dir.chdir("../ios") do
+      run_tests(
+        workspace: "QuvoSalesApp.xcworkspace",
+        scheme: "QuvoSalesApp",
+        device: "iPhone 15 Pro"
+      )
+    end
+  end
+  
+  desc "Build and upload to TestFlight for beta testing"
+  lane :testflight do |options|
+    setup_keychain
+    
+    # Build the React Native bundle
+    sh("npx react-native bundle --platform ios --dev false --entry-file index.js --bundle-output ios/main.jsbundle")
+    
+    # Get App Store certificates
+    match(
+      type: "appstore",
+      readonly: false
+    )
+    
+    # Configure automatic code signing for App Store distribution
+    automatic_code_signing(
+      path: "ios/QuvoSalesApp.xcodeproj",
+      use_automatic_signing: false,
+      team_id: "MSMA322M62",
+      bundle_identifier: "com.digitaltide.quvosalesapp"
+    )
+    
+    # Note: Build number increment disabled for initial setup
+    
+    # Build for App Store
+    build_app(
+      scheme: "QuvoSalesApp",
+      workspace: "ios/QuvoSalesApp.xcworkspace",
+      configuration: "Release",
+      export_method: "app-store",
+      output_directory: "fastlane/builds",
+      clean: true,
+      include_bitcode: false,
+      include_symbols: true,
+      xcargs: "DEVELOPMENT_TEAM=MSMA322M62 PRODUCT_BUNDLE_IDENTIFIER=com.digitaltide.quvosalesapp CODE_SIGN_IDENTITY='Apple Distribution' PROVISIONING_PROFILE_SPECIFIER='match AppStore com.digitaltide.quvosalesapp'"
+    )
+    
+    # Upload to TestFlight using existing API key setup from setup_keychain
+    upload_to_testflight(
+      skip_waiting_for_build_processing: options[:skip_waiting] || false,
+      changelog: options[:changelog] || generate_release_notes,
+      distribute_external: options[:external] || false,
+      groups: options[:groups] || ["Internal Testing"],
+      submit_beta_review: options[:submit_review] || false
+    )
+    
+    UI.success("✅ Build uploaded to TestFlight!")
+  end
+  
+  desc "Build for ad-hoc distribution (for specific testers)"
+  lane :build_adhoc do |options|
+    setup_keychain
+    
+    Dir.chdir("../ios") do
+      # Install CocoaPods dependencies  
+      cocoapods(use_bundle_exec: false)
+      
+      # Build the React Native bundle
+      sh("cd .. && npx react-native bundle --platform ios --dev false --entry-file index.js --bundle-output ios/main.jsbundle")
+      
+      # Get ad-hoc certificates
+      match(
+        type: "adhoc",
+        readonly: true
+      )
+      
+      # Increment build number
+      increment_build_number(
+        xcodeproj: "QuvoSalesApp.xcodeproj"
+      )
+      
+      # Build for ad-hoc distribution
+      build_app(
+        scheme: "QuvoSalesApp",
+        workspace: "QuvoSalesApp.xcworkspace",
+        configuration: "Release",
+        export_method: "ad-hoc",
+        output_directory: "../fastlane/builds",
+        output_name: "QuvoSalesApp-adhoc-#{Time.now.strftime('%Y%m%d-%H%M%S')}.ipa",
+        clean: true,
+        include_bitcode: false,
+        include_symbols: true
+      )
+    end
+    
+    UI.success("✅ Ad-hoc build completed! Install on registered test devices.")
+  end
+  
+  # Direct upload lane for existing IPA
+  desc "Upload existing IPA to TestFlight"
+  lane :upload_existing do
+    setup_keychain
+    
+    upload_to_testflight(
+      ipa: "fastlane/builds/QuvoSalesApp.ipa",
+      skip_waiting_for_build_processing: true,
+      changelog: "Martin Marietta Sales Demo App - Ready for testing"
+    )
+    
+    UI.success("✅ Upload complete! Check App Store Connect.")
+  end
+
+  # Helper method to setup keychain for CI/local development
+  private_lane :setup_keychain do
+    # Setup App Store Connect API Key for authentication
+    if ENV["APP_STORE_CONNECT_API_KEY_ID"] && ENV["APP_STORE_CONNECT_ISSUER_ID"] && File.exist?(ENV["APP_STORE_CONNECT_API_KEY_FILEPATH"])
+      UI.message("🔑 Using App Store Connect API key for authentication...")
+      app_store_connect_api_key(
+        key_id: ENV["APP_STORE_CONNECT_API_KEY_ID"],
+        issuer_id: ENV["APP_STORE_CONNECT_ISSUER_ID"],
+        key_filepath: ENV["APP_STORE_CONNECT_API_KEY_FILEPATH"],
+        duration: 1200,
+        in_house: false
+      )
+    else
+      UI.message("⚠️ Using Apple ID authentication - API key not found or incomplete")
+    end
+    
+    if is_ci?
+      UI.message("🤖 Running on CI - setting up temporary keychain...")
+      create_keychain(
+        name: "fastlane_certificates",
+        password: ENV["MATCH_KEYCHAIN_PASSWORD"] || "fastlane-match-keychain",
+        default_keychain: true,
+        unlock: true,
+        timeout: 3600,
+        add_to_search_list: true
+      )
+    else
+      UI.message("💻 Running locally - using system keychain")
+    end
+  end
+  
+  # Custom action to upload to Digital Tide
+  private_lane :upload_to_digital_tide do |options|
+    api_token = options[:api_token]
+    app_id = options[:app_id]
+    build_path = options[:build_path]
+    release_notes = options[:release_notes]
+    version = options[:version]
+    build_number = options[:build_number]
+    
+    if api_token.nil?
+      UI.user_error!("DIGITAL_TIDE_API_TOKEN environment variable is required")
+    end
+    
+    UI.message("📤 Uploading to Digital Tide...")
+    UI.message("App ID: #{app_id}")
+    UI.message("Version: #{version}")
+    UI.message("Build: #{build_number}")
+    UI.message("Build Path: #{build_path}")
+    
+    # Create the upload using curl (replace with actual Digital Tide API endpoint)
+    digital_tide_endpoint = ENV["DIGITAL_TIDE_ENDPOINT"] || "https://api.digitaltide.com/v1/apps"
+    
+    sh("curl -X POST '#{digital_tide_endpoint}/#{app_id}/builds' \
+        -H 'Authorization: Bearer #{api_token}' \
+        -H 'Content-Type: multipart/form-data' \
+        -F 'ipa=@#{build_path}' \
+        -F 'version=#{version}' \
+        -F 'build=#{build_number}' \
+        -F 'release_notes=#{release_notes}'")
+    
+    UI.success("✅ Successfully uploaded to Digital Tide!")
+  end
+  
+  # Generate release notes from git commits
+  private_lane :generate_release_notes do
+    changelog = changelog_from_git_commits(
+      between: [ENV["CI_COMMIT_BEFORE_SHA"] || "HEAD~3", "HEAD"],
+      pretty: "- %s",
+      date_format: "short",
+      match_lightweight_tag: false,
+      merge_commit_filtering: "exclude_merges"
+    )
+    
+    release_notes = "QuvoSalesApp - Martin Marietta Sales Demo\n\n"
+    release_notes += "Recent Changes:\n"
+    release_notes += changelog
+    release_notes += "\n\nFeatures:\n"
+    release_notes += "• Real Martin Marietta facility data and contact information\n"
+    release_notes += "• Professional FontAwesome icons throughout\n"
+    release_notes += "• Functional call and email capabilities\n"
+    release_notes += "• Order confirmation with email integration\n"
+    release_notes += "• Company branding with Quvo and Martin Marietta logos\n"
+    release_notes += "\nContact: Drew Shedd - (706) 524-6274 - Drew.Shedd@martinmarietta.com"
+    
+    release_notes
+  end
+  
+  # Error handling
+  error do |lane, exception|
+    if ENV["SLACK_URL"] && !ENV["SLACK_URL"].empty?
+      slack(
+        message: "❌ Error in lane '#{lane}': #{exception}",
+        channel: "#deployments",
+        username: "Fastlane",
+        icon_url: "https://fastlane.tools/assets/img/fastlane_icon.png"
+      )
+    end
+  end
+  
+  desc "Quick distribution setup for business partner"
+  lane :setup_partner do |options|
+    partner_name = options[:name] || "Business Partner"
+    partner_udid = options[:udid]
+    
+    if partner_udid.nil?
+      UI.user_error!("Please provide UDID: fastlane ios setup_partner udid:'DEVICE_UDID' name:'Partner Name'")
+    end
+    
+    UI.header("🤝 Setting up #{partner_name} for testing")
+    
+    # Add device
+    add_device(name: partner_name, udid: partner_udid)
+    
+    # Build ad-hoc version
+    build_adhoc
+    
+    UI.success("✅ #{partner_name} is set up for testing!")
+    UI.important("📱 Send them the IPA file: #{lane_context[SharedValues::IPA_OUTPUT_PATH]}")
+    UI.important("📧 Installation: AirDrop, email, or file sharing")
+  end
+  
+  desc "Build and prepare for manual TestFlight upload"
+  lane :build_for_testflight do
+    # Build for App Store but don't upload
+    setup_keychain
+    
+    # Build the React Native bundle
+    sh("npx react-native bundle --platform ios --dev false --entry-file index.js --bundle-output ios/main.jsbundle")
+    
+    # Get App Store certificates
+    match(type: "appstore", readonly: false)
+    
+    # Configure project
+    automatic_code_signing(
+      path: "ios/QuvoSalesApp.xcodeproj",
+      use_automatic_signing: false,
+      team_id: "MSMA322M62",
+      bundle_identifier: "com.digitaltide.quvosalesapp"
+    )
+    
+    # Build for App Store
+    build_app(
+      scheme: "QuvoSalesApp",
+      workspace: "ios/QuvoSalesApp.xcworkspace",
+      configuration: "Release",
+      export_method: "app-store",
+      output_directory: "fastlane/builds",
+      output_name: "QuvoSalesApp-TestFlight.ipa",
+      clean: true,
+      include_bitcode: false,
+      include_symbols: true,
+      xcargs: "DEVELOPMENT_TEAM=MSMA322M62 PRODUCT_BUNDLE_IDENTIFIER=com.digitaltide.quvosalesapp CODE_SIGN_IDENTITY='Apple Distribution' PROVISIONING_PROFILE_SPECIFIER='match AppStore com.digitaltide.quvosalesapp'"
+    )
+    
+    UI.success("✅ TestFlight IPA ready!")
+    UI.important("📤 Upload manually to App Store Connect:")
+    UI.important("🌐 https://appstoreconnect.apple.com")
+    UI.important("📁 File: #{lane_context[SharedValues::IPA_OUTPUT_PATH]}")
+  end
+  
+  desc "Show distribution instructions"
+  lane :distribution_guide do
+    UI.header("📱 QuvoSalesApp Distribution Options")
+    UI.message("")
+    UI.message("🚀 Option 1: TestFlight (Recommended)")
+    UI.message("   1. Run: fastlane ios build_for_testflight")
+    UI.message("   2. Upload IPA to https://appstoreconnect.apple.com")
+    UI.message("   3. Add testers in TestFlight section")
+    UI.message("")
+    UI.message("📱 Option 2: Direct Install (Quick)")
+    UI.message("   1. Get partner's UDID from https://udid.tech")
+    UI.message("   2. Run: fastlane ios setup_partner udid:'THEIR_UDID' name:'Partner Name'")
+    UI.message("   3. Send them the IPA file")
+    UI.message("")
+    UI.message("📖 Full guide: DISTRIBUTION_GUIDE.md")
+    UI.message("📖 Certificate help: ./setup-certificates.sh help")
+  end
+  
+end
+
+# Additional platform configurations can be added here
+# For example, Android deployment:
+# platform :android do
+#   desc "Deploy Android app to Digital Tide"
+#   lane :deploy_android_demo do
+#     # Android build and deployment logic
+#   end
+# end

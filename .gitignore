@@ -53,6 +53,17 @@ yarn-error.log
 **/fastlane/screenshots
 **/fastlane/test_output
 
+# Apple Developer & Distribution (sensitive)
+**/fastlane/.env
+**/fastlane/AuthKey_*.p8
+**/fastlane/builds/
+**/fastlane/Appfile
+**/fastlane/README.md
+deploy.sh
+run-setup.sh
+DEPLOYMENT.md
+DIGITAL_TIDE_SETUP.md
+
 # Bundle artifact
 *.jsbundle
 

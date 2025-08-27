@@ -71,7 +71,7 @@ class CustomerDataService {
       // Use LiDAR data if available, otherwise generate realistic mock data
       const bayData = lidarData ? this.mapLidarToBay(lidarData, product) : this.generateRealisticBayData(product);
       
-      bays.push({
+      const bay = {
         id: `${customerId}_${siteId}_${productCode}`,
         name: bayName,
         customerId,
@@ -93,13 +93,20 @@ class CustomerDataService {
         // Site context
         siteAddress: `${site.address}, ${site.city}, ${site.state}`,
         siteContact: site.contactPhone,
+        salesRepPhone: site.salesRepPhone,
         siteEmail: site.contactEmail,
+        contactName: site.contactName,
+        contactTitle: site.contactTitle,
         siteHours: site.hoursOfOperation,
         railwayAccess: site.railwayAccess,
         datetime: new Date().toISOString(),
         storageId: `${customerId}_${siteId}_${productCode}`,
         uniqueId: `${customerId}_${siteId}_${productCode}_${index}`
-      });
+      };
+      
+      // Contact info properly mapped from real Martin Marietta facility data
+      
+      bays.push(bay);
     });
 
     return bays;

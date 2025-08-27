@@ -14,3 +14,6 @@ gem 'bigdecimal'
 gem 'logger'
 gem 'benchmark'
 gem 'mutex_m'
+
+# Fastlane for iOS deployment and automation
+gem 'fastlane', '~> 2.218'

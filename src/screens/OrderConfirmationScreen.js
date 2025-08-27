@@ -9,7 +9,9 @@ import {
   Alert,
   Animated,
   TextInput,
+  Linking,
 } from 'react-native';
+import Icon from 'react-native-vector-icons/FontAwesome';
 import { useAuth } from '../context/AuthContext';
 
 const OrderConfirmationScreen = ({ route, navigation }) => {
@@ -52,26 +54,46 @@ const OrderConfirmationScreen = ({ route, navigation }) => {
       return;
     }
     
-    setShowEmailDemo(true);
+    // Send actual email with order details
+    const emailSubject = `New Order Request - #${orderNumber} - ${orderData.material}`;
+    const emailBody = generateEmailContent();
+    const emailUrl = `mailto:${orderData.contactEmail}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`;
     
-    // Simulate order processing
-    setTimeout(() => {
+    Linking.openURL(emailUrl).then(() => {
+      setShowEmailDemo(true);
+      
+      // Show success message after email is sent
+      setTimeout(() => {
+        Alert.alert(
+          'Order Submitted Successfully',
+          `Order #${orderNumber} has been sent to ${orderData.contactEmail}\n\nNext Steps:\n• Facility will confirm availability\n• Delivery details within 2 business hours\n• You'll receive confirmation email`,
+          [
+            {
+              text: 'View Email Demo',
+              onPress: () => setShowEmailDemo(true)
+            },
+            {
+              text: 'Back to Dashboard',
+              onPress: () => navigation.navigate('Dashboard'),
+              style: 'default'
+            }
+          ]
+        );
+      }, 500);
+    }).catch(() => {
+      // Fallback if email app not available
+      setShowEmailDemo(true);
       Alert.alert(
-        'Order Submitted Successfully',
-        `Order #${orderNumber} has been sent to ${orderData.contactEmail}\n\nThe facility will confirm availability and delivery details within 2 business hours.`,
+        'Email App Not Available',
+        'Order details are ready to send. Please use the email demo to see the order information.',
         [
           {
             text: 'View Email Demo',
             onPress: () => setShowEmailDemo(true)
-          },
-          {
-            text: 'Back to Dashboard',
-            onPress: () => navigation.navigate('Dashboard'),
-            style: 'default'
           }
         ]
       );
-    }, 1500);
+    });
   };
 
   const formatCurrency = (amount) => {
@@ -103,7 +125,9 @@ Total Order Value: ${formatCurrency(orderData.totalPrice)}
 FACILITY INFORMATION:
 Location: ${orderData.facility}
 Address: ${orderData.facilityAddress}
-Phone: ${orderData.contactPhone}
+Facility Office Phone: ${orderData.contactPhone}
+Sales Representative: ${orderData.contactName || 'Drew Shedd'} ${orderData.contactTitle || 'Sales Representative'}
+Sales Rep Phone: ${orderData.salesRepPhone || '(706) 524-6274'}
 Email: ${orderData.contactEmail}
 Hours: ${orderData.facilityHours}
 Available Stock: ${orderData.availableStock.toLocaleString()} ${orderData.unitType}
@@ -220,7 +244,7 @@ For questions, please contact the sales agent directly.`;
         <ScrollView showsVerticalScrollIndicator={false}>
           {/* Success Icon */}
           <View style={styles.successIcon}>
-            <Text style={styles.successText}>✓</Text>
+            <Icon name="check-circle" size={60} color="#27AE60" />
           </View>
 
           {/* Order Summary Card */}
@@ -374,27 +398,37 @@ For questions, please contact the sales agent directly.`;
 
           {/* Order Status */}
           <View style={styles.statusCard}>
-            <Text style={styles.statusTitle}>📋 Next Steps</Text>
+            <View style={styles.statusTitleRow}>
+              <Icon name="list-alt" size={18} color="#2C3E50" />
+              <Text style={styles.statusTitle}>Next Steps</Text>
+            </View>
             <View style={styles.statusSteps}>
               <View style={styles.statusStep}>
-                <View style={styles.stepNumber}>
-                  <Text style={styles.stepNumberText}>1</Text>
+                <View style={styles.stepIconContainer}>
+                  <Icon name="envelope-o" size={16} color="#3498DB" />
                 </View>
                 <Text style={styles.stepText}>Order will be sent to facility</Text>
               </View>
               
               <View style={styles.statusStep}>
-                <View style={styles.stepNumber}>
-                  <Text style={styles.stepNumberText}>2</Text>
+                <View style={styles.stepIconContainer}>
+                  <Icon name="check-square-o" size={16} color="#3498DB" />
                 </View>
                 <Text style={styles.stepText}>Facility confirms availability</Text>
               </View>
               
               <View style={styles.statusStep}>
-                <View style={styles.stepNumber}>
-                  <Text style={styles.stepNumberText}>3</Text>
+                <View style={styles.stepIconContainer}>
+                  <Icon name="truck" size={16} color="#3498DB" />
                 </View>
                 <Text style={styles.stepText}>Delivery details provided</Text>
+              </View>
+
+              <View style={styles.statusStep}>
+                <View style={styles.stepIconContainer}>
+                  <Icon name="clock-o" size={16} color="#3498DB" />
+                </View>
+                <Text style={styles.stepText}>Response within 2 business hours</Text>
               </View>
             </View>
           </View>
@@ -405,8 +439,9 @@ For questions, please contact the sales agent directly.`;
               style={styles.primaryButton}
               onPress={sendOrder}
             >
+              <Icon name="envelope" size={16} color="#FFFFFF" style={styles.buttonIcon} />
               <Text style={styles.primaryButtonText}>
-                📧 Send Order to Facility
+                Send Order to Facility
               </Text>
             </TouchableOpacity>
             
@@ -414,7 +449,8 @@ For questions, please contact the sales agent directly.`;
               style={styles.secondaryButton}
               onPress={() => navigation.goBack()}
             >
-              <Text style={styles.secondaryButtonText}>← Back to Edit</Text>
+              <Icon name="arrow-left" size={16} color="#5D6D7E" style={styles.buttonIcon} />
+              <Text style={styles.secondaryButtonText}>Back to Edit</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>
@@ -481,17 +517,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 30,
     marginBottom: 20,
-  },
-  successText: {
-    fontSize: 60,
-    color: '#27AE60',
     backgroundColor: '#E8F5E8',
     width: 100,
     height: 100,
-    textAlign: 'center',
-    textAlignVertical: 'center',
     borderRadius: 50,
-    overflow: 'hidden',
+    justifyContent: 'center',
+    alignSelf: 'center',
   },
   orderCard: {
     backgroundColor: '#FFFFFF',
@@ -590,11 +621,16 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 4,
   },
+  statusTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
   statusTitle: {
     fontSize: 18,
     fontWeight: 'bold',
     color: '#2C3E50',
-    marginBottom: 16,
+    marginLeft: 8,
   },
   statusSteps: {
     marginTop: 8,
@@ -604,19 +640,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 12,
   },
-  stepNumber: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: '#3498DB',
+  stepIconContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#F8F9FA',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
-  },
-  stepNumberText: {
-    fontSize: 12,
-    color: '#FFFFFF',
-    fontWeight: 'bold',
+    borderWidth: 1,
+    borderColor: '#E8EAED',
   },
   stepText: {
     fontSize: 14,
@@ -630,13 +663,18 @@ const styles = StyleSheet.create({
     backgroundColor: '#27AE60',
     borderRadius: 12,
     padding: 16,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+  },
+  buttonIcon: {
+    marginRight: 8,
   },
   primaryButtonText: {
     color: '#FFFFFF',
@@ -647,7 +685,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8F9FA',
     borderRadius: 12,
     padding: 16,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     borderWidth: 1,
     borderColor: '#E8EAED',
   },

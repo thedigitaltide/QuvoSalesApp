@@ -16,9 +16,12 @@
           "latitude": "27.912993",
           "longitude": "-82.438939",
           "contactPhone": "(813) 261-1764",
+          "salesRepPhone": "(706) 524-6274",
           "contactEmail": "Drew.Shedd@martinmarietta.com",
+          "contactName": "Drew Shedd",
+          "contactTitle": "Sales Representative",
           "hoursOfOperation": "Mon - Fri | 5:00 AM - 3:00 PM",
-          "railwayAccess": false,
+          "railwayAccess": "No",
           "products": {
             "1088": {
               "code": "1088",
@@ -71,10 +74,13 @@
           "zip": "33913",
           "latitude": "26.47574",
           "longitude": "-81.70902",
-          "contactPhone": "(239) 267-6000",
+          "contactPhone": "(239) 267-6000", 
+          "salesRepPhone": "(706) 524-6274",
           "contactEmail": "Drew.Shedd@martinmarietta.com",
+          "contactName": "Drew Shedd",
+          "contactTitle": "Sales Representative",
           "hoursOfOperation": "Mon - Fri | 4:00 AM - 4:00 PM",
-          "railwayAccess": false,
+          "railwayAccess": "No",
           "products": {
             "1088": {
               "code": "1088",
@@ -118,9 +124,12 @@
           "latitude": "27.905996",
           "longitude": "-81.986117",
           "contactPhone": "(863) 844-5671",
+          "salesRepPhone": "(706) 524-6274", 
           "contactEmail": "Drew.Shedd@martinmarietta.com",
+          "contactName": "Drew Shedd",
+          "contactTitle": "Sales Representative",
           "hoursOfOperation": "Mon - Fri | 6:00 AM - 3:00 PM",
-          "railwayAccess": true,
+          "railwayAccess": "Yes",
           "products": {
             "1088": {
               "code": "1088",

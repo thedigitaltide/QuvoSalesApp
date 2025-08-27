@@ -10,8 +10,11 @@ import {
   StatusBar,
   TextInput,
   Alert,
+  Linking,
+  Image,
 } from 'react-native';
 import { LineChart } from 'react-native-chart-kit';
+import Icon from 'react-native-vector-icons/FontAwesome';
 import api from '../services/api';
 
 const { width } = Dimensions.get('window');
@@ -90,22 +93,22 @@ const BayDetailScreen = ({ route, navigation }) => {
     if (utilizationPercent >= 90) return {
       text: 'NEARLY FULL',
       color: '#FF6B6B',
-      icon: '●',
+      icon: 'warning',
     };
     if (utilizationPercent >= 70) return {
       text: 'HIGH LEVEL',
       color: '#FFB74D',
-      icon: '●',
+      icon: 'arrow-up',
     };
     if (utilizationPercent >= 30) return {
       text: 'AVAILABLE',
       color: '#4CAF50',
-      icon: '●',
+      icon: 'check',
     };
     return {
       text: 'LOW LEVEL',
       color: '#9E9E9E',
-      icon: '●',
+      icon: 'arrow-down',
     };
   };
 
@@ -176,6 +179,8 @@ const BayDetailScreen = ({ route, navigation }) => {
   const pricePerTon = currentRecord?.pricePerTon || currentRecord?.pricePerUnit || 0;
   const materialType = currentRecord?.materialType || currentRecord?.material || currentRecord?.productName || 'Unknown Material';
   const facilityName = currentRecord?.facilityName || currentRecord?.siteName || 'Unknown Facility';
+  
+  // Facility contact information is now properly integrated with real Martin Marietta data
 
   if (loading) {
     return (
@@ -202,6 +207,10 @@ const BayDetailScreen = ({ route, navigation }) => {
           <Text style={styles.bayName}>{zoneName}</Text>
           <Text style={styles.subtitle}>{materialType}</Text>
         </View>
+        <Image 
+          source={require('../../assets/images/quvo_logo.jpg')}
+          style={styles.quvoLogo}
+        />
       </View>
 
       <ScrollView style={styles.content}>
@@ -210,7 +219,7 @@ const BayDetailScreen = ({ route, navigation }) => {
           <View style={styles.statusHeader}>
             <Text style={styles.sectionTitle}>Current Status</Text>
             <View style={[styles.statusBadge, { backgroundColor: status.color }]}>
-              <Text style={[styles.statusIcon, { color: '#FFFFFF' }]}>{status.icon}</Text>
+              <Icon name={status.icon} size={12} color="#FFFFFF" style={styles.statusIcon} />
               <Text style={[styles.statusText, { color: '#FFFFFF' }]}>{status.text}</Text>
             </View>
           </View>
@@ -260,6 +269,105 @@ const BayDetailScreen = ({ route, navigation }) => {
               </Text>
             </View>
           )}
+        </View>
+
+        {/* Facility Information Card */}
+        <View style={styles.facilityInfoCard}>
+          <Text style={styles.sectionTitle}>Facility Information</Text>
+          
+          <View style={styles.facilityHeader}>
+            <View style={styles.facilityDetails}>
+              <Text style={styles.facilityName}>{facilityName}</Text>
+              <Text style={styles.facilityAddress}>
+                {currentRecord?.siteAddress || 'Address not available'}
+              </Text>
+              <View style={styles.facilityHoursRow}>
+                <Icon name="clock-o" size={14} color="#7F8C8D" />
+                <Text style={styles.facilityHours}>
+                  {currentRecord?.siteHours || 'Contact for hours'}
+                </Text>
+              </View>
+            </View>
+            
+            {currentRecord?.railwayAccess && (
+              <View style={styles.railwayBadge}>
+                <Icon name="train" size={12} color="#27AE60" />
+                <Text style={styles.railwayText}>Railway</Text>
+              </View>
+            )}
+          </View>
+
+          <View style={styles.contactButtons}>
+            <TouchableOpacity 
+              style={styles.contactButton}
+              onPress={() => {
+                const phone = currentRecord?.siteContact || currentRecord?.contactPhone;
+                if (phone) {
+                  Linking.openURL(`tel:${phone}`);
+                } else {
+                  Alert.alert('Phone Not Available', 'Contact information not available for this facility.');
+                }
+              }}
+            >
+              <Icon name="building" size={16} color="#FFFFFF" />
+              <View style={styles.contactButtonContent}>
+                <Text style={styles.contactButtonText}>Call Facility Office</Text>
+                <Text style={styles.contactButtonSubtext}>
+                  {currentRecord?.siteContact || currentRecord?.contactPhone || 'N/A'}
+                </Text>
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={styles.contactButton}
+              onPress={() => {
+                const phone = currentRecord?.salesRepPhone;
+                if (phone) {
+                  Linking.openURL(`tel:${phone}`);
+                } else {
+                  Alert.alert('Phone Not Available', 'Sales rep contact not available.');
+                }
+              }}
+            >
+              <Icon name="user" size={16} color="#FFFFFF" />
+              <View style={styles.contactButtonContent}>
+                <Text style={styles.contactButtonText}>Call Sales Rep</Text>
+                <Text style={styles.contactButtonSubtext}>
+                  {`${currentRecord?.contactName || 'Drew Shedd'} ${currentRecord?.salesRepPhone || '(706) 524-6274'}`}
+                </Text>
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={[styles.contactButton, styles.emailButton]}
+              onPress={() => {
+                const email = currentRecord?.siteEmail || currentRecord?.contactEmail;
+                if (email) {
+                  Linking.openURL(`mailto:${email}`);
+                } else {
+                  Alert.alert('Email Not Available', 'Email contact not available for this facility.');
+                }
+              }}
+            >
+              <Icon name="envelope" size={16} color="#FFFFFF" />
+              <View style={styles.contactButtonContent}>
+                <Text style={styles.contactButtonText}>Email Sales Rep</Text>
+                <Text style={styles.contactButtonSubtext}>
+                  {(currentRecord?.siteEmail || currentRecord?.contactEmail || 'N/A').length > 20 
+                    ? 'Drew.Shedd@...' 
+                    : (currentRecord?.siteEmail || currentRecord?.contactEmail || 'N/A')}
+                </Text>
+              </View>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.salesRepInfo}>
+            <Icon name="user" size={14} color="#7F8C8D" />
+            <View style={styles.salesRepDetails}>
+              <Text style={styles.salesRepName}>Drew Shedd</Text>
+              <Text style={styles.salesRepTitle}>Sales Representative</Text>
+            </View>
+          </View>
         </View>
 
         {/* Sales Calculator */}
@@ -378,8 +486,11 @@ const BayDetailScreen = ({ route, navigation }) => {
                     unitType: unitType,
                     pricePerUnit: pricePerTon,
                     totalPrice: pricePerTon * selectedQuantity,
-                    contactPhone: currentRecord?.siteContact || currentRecord?.contactPhone || '(800) MARTIN-1',
-                    contactEmail: currentRecord?.siteEmail || currentRecord?.contactEmail || 'sales@martinmarietta.com',
+                    contactPhone: currentRecord?.siteContact || currentRecord?.contactPhone || '(813) 261-1764',
+                    salesRepPhone: currentRecord?.salesRepPhone || '(706) 524-6274',
+                    contactName: currentRecord?.contactName || 'Drew Shedd',
+                    contactTitle: currentRecord?.contactTitle || 'Sales Representative',
+                    contactEmail: currentRecord?.siteEmail || currentRecord?.contactEmail || 'Drew.Shedd@martinmarietta.com',
                     availableStock: currentVolume,
                     facilityAddress: currentRecord?.siteAddress || 'Contact facility for address',
                     facilityHours: currentRecord?.siteHours || currentRecord?.hoursOfOperation || 'Contact for hours'
@@ -549,6 +660,11 @@ const styles = StyleSheet.create({
   },
   headerContent: {
     flex: 1,
+  },
+  quvoLogo: {
+    width: 80,
+    height: 25,
+    resizeMode: 'contain',
   },
   bayName: {
     fontSize: 24,
@@ -950,6 +1066,116 @@ const styles = StyleSheet.create({
     color: 'rgba(255, 255, 255, 0.9)',
     fontSize: 12,
     fontWeight: '500',
+  },
+  facilityInfoCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 20,
+    marginTop: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  facilityHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 16,
+  },
+  facilityDetails: {
+    flex: 1,
+  },
+  facilityName: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#2C3E50',
+    marginBottom: 4,
+  },
+  facilityAddress: {
+    fontSize: 14,
+    color: '#7F8C8D',
+    marginBottom: 8,
+  },
+  facilityHoursRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  facilityHours: {
+    fontSize: 12,
+    color: '#7F8C8D',
+    marginLeft: 6,
+  },
+  railwayBadge: {
+    backgroundColor: '#E8F5E8',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  railwayText: {
+    fontSize: 10,
+    color: '#27AE60',
+    fontWeight: 'bold',
+    marginLeft: 4,
+  },
+  contactButtons: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 16,
+  },
+  contactButton: {
+    minWidth: '30%',
+    flexBasis: '48%',
+    backgroundColor: '#3498DB',
+    borderRadius: 12,
+    padding: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  emailButton: {
+    backgroundColor: '#E67E22',
+  },
+  contactButtonContent: {
+    marginLeft: 10,
+    flex: 1,
+  },
+  contactButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  contactButtonSubtext: {
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontSize: 10,
+    marginTop: 2,
+  },
+  salesRepInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8F9FA',
+    padding: 12,
+    borderRadius: 8,
+  },
+  salesRepDetails: {
+    marginLeft: 10,
+  },
+  salesRepName: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#2C3E50',
+  },
+  salesRepTitle: {
+    fontSize: 12,
+    color: '#7F8C8D',
   },
 });
 
