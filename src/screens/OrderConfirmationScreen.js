@@ -8,6 +8,7 @@ import {
   StatusBar,
   Alert,
   Animated,
+  TextInput,
 } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 
@@ -18,6 +19,11 @@ const OrderConfirmationScreen = ({ route, navigation }) => {
   const [slideAnim] = useState(new Animated.Value(50));
   const [orderNumber] = useState(() => `MM${Date.now().toString().slice(-8)}`);
   const [showEmailDemo, setShowEmailDemo] = useState(false);
+  const [customerName, setCustomerName] = useState('');
+  const [customerCompany, setCustomerCompany] = useState('');
+  const [deliveryAddress, setDeliveryAddress] = useState('');
+  const [customerPhone, setCustomerPhone] = useState('');
+  const [specialInstructions, setSpecialInstructions] = useState('');
 
   useEffect(() => {
     Animated.parallel([
@@ -35,6 +41,17 @@ const OrderConfirmationScreen = ({ route, navigation }) => {
   }, []);
 
   const sendOrder = () => {
+    // Validate required fields
+    if (!customerName.trim()) {
+      Alert.alert('Missing Information', 'Please enter the customer contact name.');
+      return;
+    }
+    
+    if (!deliveryAddress.trim()) {
+      Alert.alert('Missing Information', 'Please enter the delivery address.');
+      return;
+    }
+    
     setShowEmailDemo(true);
     
     // Simulate order processing
@@ -85,14 +102,24 @@ Total Order Value: ${formatCurrency(orderData.totalPrice)}
 
 FACILITY INFORMATION:
 Location: ${orderData.facility}
+Address: ${orderData.facilityAddress}
+Phone: ${orderData.contactPhone}
+Email: ${orderData.contactEmail}
+Hours: ${orderData.facilityHours}
 Available Stock: ${orderData.availableStock.toLocaleString()} ${orderData.unitType}
-Contact: ${orderData.contactPhone}
 
 CUSTOMER INFORMATION:
 Sales Agent: ${user?.name || 'Unknown'}
 Company: Martin Marietta Sales
+Customer Name: ${customerName || 'To be confirmed'}
+Customer Company: ${customerCompany || 'To be confirmed'}
+Customer Phone: ${customerPhone || 'To be confirmed'}
+Delivery Address: ${deliveryAddress || 'To be confirmed'}
 Request Date: ${now.toLocaleDateString()}
 Estimated Delivery: ${deliveryDate.toLocaleDateString()}
+
+SPECIAL INSTRUCTIONS:
+${specialInstructions || 'None specified'}
 
 NEXT STEPS:
 1. Confirm material availability
@@ -250,7 +277,12 @@ For questions, please contact the sales agent directly.`;
               </View>
               
               <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Contact:</Text>
+                <Text style={styles.detailLabel}>Address:</Text>
+                <Text style={styles.detailValue}>{orderData.facilityAddress}</Text>
+              </View>
+              
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Phone:</Text>
                 <Text style={styles.detailValue}>{orderData.contactPhone}</Text>
               </View>
               
@@ -260,11 +292,83 @@ For questions, please contact the sales agent directly.`;
               </View>
               
               <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Hours:</Text>
+                <Text style={styles.detailValue}>{orderData.facilityHours}</Text>
+              </View>
+              
+              <View style={styles.detailRow}>
                 <Text style={styles.detailLabel}>Available Stock:</Text>
                 <Text style={styles.detailValue}>
                   {orderData.availableStock.toLocaleString()} {orderData.unitType}
                 </Text>
               </View>
+            </View>
+          </View>
+
+          {/* Customer Information Form */}
+          <View style={styles.customerFormCard}>
+            <Text style={styles.customerFormTitle}>Customer & Delivery Information</Text>
+            
+            <View style={styles.formRow}>
+              <View style={styles.formField}>
+                <Text style={styles.formLabel}>Contact Name *</Text>
+                <TextInput
+                  style={styles.formInput}
+                  value={customerName}
+                  onChangeText={setCustomerName}
+                  placeholder="John Smith"
+                  placeholderTextColor="#95A5A6"
+                />
+              </View>
+              
+              <View style={styles.formField}>
+                <Text style={styles.formLabel}>Company</Text>
+                <TextInput
+                  style={styles.formInput}
+                  value={customerCompany}
+                  onChangeText={setCustomerCompany}
+                  placeholder="ABC Construction"
+                  placeholderTextColor="#95A5A6"
+                />
+              </View>
+            </View>
+            
+            <View style={styles.formFieldFull}>
+              <Text style={styles.formLabel}>Delivery Address *</Text>
+              <TextInput
+                style={styles.formInput}
+                value={deliveryAddress}
+                onChangeText={setDeliveryAddress}
+                placeholder="123 Construction Site Rd, Tampa, FL 33602"
+                placeholderTextColor="#95A5A6"
+                multiline={true}
+                numberOfLines={2}
+              />
+            </View>
+            
+            <View style={styles.formFieldFull}>
+              <Text style={styles.formLabel}>Customer Phone</Text>
+              <TextInput
+                style={styles.formInput}
+                value={customerPhone}
+                onChangeText={setCustomerPhone}
+                placeholder="(813) 555-0123"
+                placeholderTextColor="#95A5A6"
+                keyboardType="phone-pad"
+              />
+            </View>
+            
+            <View style={styles.formFieldFull}>
+              <Text style={styles.formLabel}>Special Instructions</Text>
+              <TextInput
+                style={[styles.formInput, styles.formTextArea]}
+                value={specialInstructions}
+                onChangeText={setSpecialInstructions}
+                placeholder="Delivery preferences, site access instructions, etc."
+                placeholderTextColor="#95A5A6"
+                multiline={true}
+                numberOfLines={3}
+              />
             </View>
           </View>
 
@@ -602,6 +706,54 @@ const styles = StyleSheet.create({
   },
   emailActions: {
     marginBottom: 30,
+  },
+  customerFormCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  customerFormTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#2C3E50',
+    marginBottom: 16,
+  },
+  formRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 16,
+  },
+  formField: {
+    flex: 1,
+  },
+  formFieldFull: {
+    marginBottom: 16,
+  },
+  formLabel: {
+    fontSize: 14,
+    color: '#2C3E50',
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  formInput: {
+    borderWidth: 1,
+    borderColor: '#E8EAED',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
+    color: '#2C3E50',
+    backgroundColor: '#F8F9FA',
+  },
+  formTextArea: {
+    textAlignVertical: 'top',
+    minHeight: 80,
   },
 });
 

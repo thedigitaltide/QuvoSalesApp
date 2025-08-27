@@ -373,14 +373,16 @@ const BayDetailScreen = ({ route, navigation }) => {
                   const orderData = {
                     facility: facilityName,
                     material: materialType,
-                    materialCode: currentRecord?.code || currentRecord?.productCode || 'N/A',
+                    materialCode: currentRecord?.code || currentRecord?.productCode || currentRecord?.productCode || 'N/A',
                     quantity: selectedQuantity,
                     unitType: unitType,
                     pricePerUnit: pricePerTon,
                     totalPrice: pricePerTon * selectedQuantity,
-                    contactPhone: currentRecord?.contactPhone || 'Contact facility',
-                    contactEmail: currentRecord?.contactEmail || 'sales@martinmarietta.com',
-                    availableStock: currentVolume
+                    contactPhone: currentRecord?.siteContact || currentRecord?.contactPhone || '(800) MARTIN-1',
+                    contactEmail: currentRecord?.siteEmail || currentRecord?.contactEmail || 'sales@martinmarietta.com',
+                    availableStock: currentVolume,
+                    facilityAddress: currentRecord?.siteAddress || 'Contact facility for address',
+                    facilityHours: currentRecord?.siteHours || currentRecord?.hoursOfOperation || 'Contact for hours'
                   };
                   navigation.navigate('OrderConfirmation', { orderData });
                 }}
