@@ -207,10 +207,6 @@ const BayDetailScreen = ({ route, navigation }) => {
           <Text style={styles.bayName}>{zoneName}</Text>
           <Text style={styles.subtitle}>{materialType}</Text>
         </View>
-        <Image 
-          source={require('../../assets/images/quvo_logo.jpg')}
-          style={styles.quvoLogo}
-        />
       </View>
 
       <ScrollView style={styles.content}>
@@ -279,12 +275,12 @@ const BayDetailScreen = ({ route, navigation }) => {
             <View style={styles.facilityDetails}>
               <Text style={styles.facilityName}>{facilityName}</Text>
               <Text style={styles.facilityAddress}>
-                {currentRecord?.siteAddress || 'Address not available'}
+                {currentRecord?.address ? `${currentRecord.address}, ${currentRecord.city}, ${currentRecord.state} ${currentRecord.zip}` : 'Address not available'}
               </Text>
               <View style={styles.facilityHoursRow}>
                 <Icon name="clock-o" size={14} color="#7F8C8D" />
                 <Text style={styles.facilityHours}>
-                  {currentRecord?.siteHours || 'Contact for hours'}
+                  {currentRecord?.hoursOfOperation || 'Contact for hours'}
                 </Text>
               </View>
             </View>
@@ -301,19 +297,15 @@ const BayDetailScreen = ({ route, navigation }) => {
             <TouchableOpacity 
               style={styles.contactButton}
               onPress={() => {
-                const phone = currentRecord?.siteContact || currentRecord?.contactPhone;
-                if (phone) {
-                  Linking.openURL(`tel:${phone}`);
-                } else {
-                  Alert.alert('Phone Not Available', 'Contact information not available for this facility.');
-                }
+                const phone = currentRecord?.officePhone || currentRecord?.contactPhone || '(813) 261-1764';
+                Linking.openURL(`tel:${phone}`);
               }}
             >
               <Icon name="building" size={16} color="#FFFFFF" />
               <View style={styles.contactButtonContent}>
                 <Text style={styles.contactButtonText}>Call Facility Office</Text>
                 <Text style={styles.contactButtonSubtext}>
-                  {currentRecord?.siteContact || currentRecord?.contactPhone || 'N/A'}
+                  {currentRecord?.officePhone || currentRecord?.contactPhone || '(813) 261-1764'}
                 </Text>
               </View>
             </TouchableOpacity>
@@ -321,19 +313,15 @@ const BayDetailScreen = ({ route, navigation }) => {
             <TouchableOpacity 
               style={styles.contactButton}
               onPress={() => {
-                const phone = currentRecord?.salesRepPhone;
-                if (phone) {
-                  Linking.openURL(`tel:${phone}`);
-                } else {
-                  Alert.alert('Phone Not Available', 'Sales rep contact not available.');
-                }
+                const phone = currentRecord?.contactPhone || '(706) 524-6274';
+                Linking.openURL(`tel:${phone}`);
               }}
             >
               <Icon name="user" size={16} color="#FFFFFF" />
               <View style={styles.contactButtonContent}>
                 <Text style={styles.contactButtonText}>Call Sales Rep</Text>
                 <Text style={styles.contactButtonSubtext}>
-                  {`${currentRecord?.contactName || 'Drew Shedd'} ${currentRecord?.salesRepPhone || '(706) 524-6274'}`}
+                  {`${currentRecord?.contactName || 'Drew Shedd'} ${currentRecord?.contactPhone || '(706) 524-6274'}`}
                 </Text>
               </View>
             </TouchableOpacity>
@@ -341,21 +329,19 @@ const BayDetailScreen = ({ route, navigation }) => {
             <TouchableOpacity 
               style={[styles.contactButton, styles.emailButton]}
               onPress={() => {
-                const email = currentRecord?.siteEmail || currentRecord?.contactEmail;
-                if (email) {
-                  Linking.openURL(`mailto:${email}`);
-                } else {
-                  Alert.alert('Email Not Available', 'Email contact not available for this facility.');
-                }
+                const email = currentRecord?.contactEmail || 'Drew.Shedd@martinmarietta.com';
+                Linking.openURL(`mailto:${email}`);
               }}
             >
               <Icon name="envelope" size={16} color="#FFFFFF" />
               <View style={styles.contactButtonContent}>
                 <Text style={styles.contactButtonText}>Email Sales Rep</Text>
                 <Text style={styles.contactButtonSubtext}>
-                  {(currentRecord?.siteEmail || currentRecord?.contactEmail || 'N/A').length > 20 
-                    ? 'Drew.Shedd@...' 
-                    : (currentRecord?.siteEmail || currentRecord?.contactEmail || 'N/A')}
+                  {currentRecord?.contactEmail ? (
+                    currentRecord.contactEmail.length > 20 
+                      ? currentRecord.contactEmail.substring(0, 15) + '...'
+                      : currentRecord.contactEmail
+                  ) : 'Drew.Shedd@martinmarietta.com'}
                 </Text>
               </View>
             </TouchableOpacity>
@@ -386,14 +372,32 @@ const BayDetailScreen = ({ route, navigation }) => {
                   const maxAvailable = parseInt(currentVolume) || 0;
                   
                   if (num > maxAvailable && num > 0) {
+                    const deficit = num - maxAvailable;
                     Alert.alert(
                       'Insufficient Stock',
-                      `Only ${maxAvailable.toLocaleString()} ${unitType} available. Please contact the facility manager for larger quantities or check availability at other locations.`,
+                      `Only ${maxAvailable.toLocaleString()} ${unitType} available at this location. You need ${deficit.toLocaleString()} ${unitType} more.`,
                       [
-                        { text: 'OK', style: 'default' },
+                        { text: 'Cancel', style: 'cancel' },
                         { 
-                          text: 'Set to Max Available', 
+                          text: 'Use Max Available', 
                           onPress: () => setSelectedQuantity(maxAvailable)
+                        },
+                        {
+                          text: 'Find Nearest Location',
+                          style: 'default',
+                          onPress: () => {
+                            // Navigate back to dashboard to find other locations
+                            Alert.alert(
+                              'Finding Similar Materials',
+                              `Looking for ${materialType} at nearby facilities. Returning to dashboard to show all available locations.`,
+                              [
+                                {
+                                  text: 'OK',
+                                  onPress: () => navigation.navigate('Dashboard')
+                                }
+                              ]
+                            );
+                          }
                         }
                       ]
                     );
@@ -424,14 +428,32 @@ const BayDetailScreen = ({ route, navigation }) => {
                     const maxAvailable = parseInt(currentVolume) || 0;
                     
                     if (qty > maxAvailable) {
+                      const deficit = qty - maxAvailable;
                       Alert.alert(
                         'Insufficient Stock',
-                        `Only ${maxAvailable.toLocaleString()} ${unitType} available. Please contact the facility manager for larger quantities or check availability at other locations.`,
+                        `Only ${maxAvailable.toLocaleString()} ${unitType} available at this location. You need ${deficit.toLocaleString()} ${unitType} more.`,
                         [
-                          { text: 'OK', style: 'default' },
+                          { text: 'Cancel', style: 'cancel' },
                           { 
-                            text: 'Set to Max Available', 
+                            text: 'Use Max Available', 
                             onPress: () => setSelectedQuantity(maxAvailable)
+                          },
+                          {
+                            text: 'Find Nearest Location',
+                            style: 'default',
+                            onPress: () => {
+                              // Navigate back to dashboard to find other locations
+                              Alert.alert(
+                                'Finding Similar Materials',
+                                `Looking for ${materialType} at nearby facilities. Returning to dashboard to show all available locations.`,
+                                [
+                                  {
+                                    text: 'OK',
+                                    onPress: () => navigation.navigate('Dashboard')
+                                  }
+                                ]
+                              );
+                            }
                           }
                         ]
                       );
@@ -486,14 +508,14 @@ const BayDetailScreen = ({ route, navigation }) => {
                     unitType: unitType,
                     pricePerUnit: pricePerTon,
                     totalPrice: pricePerTon * selectedQuantity,
-                    contactPhone: currentRecord?.siteContact || currentRecord?.contactPhone || '(813) 261-1764',
-                    salesRepPhone: currentRecord?.salesRepPhone || '(706) 524-6274',
+                    contactPhone: currentRecord?.officePhone || currentRecord?.contactPhone || '(813) 261-1764',
+                    salesRepPhone: currentRecord?.contactPhone || '(706) 524-6274',
                     contactName: currentRecord?.contactName || 'Drew Shedd',
                     contactTitle: currentRecord?.contactTitle || 'Sales Representative',
-                    contactEmail: currentRecord?.siteEmail || currentRecord?.contactEmail || 'Drew.Shedd@martinmarietta.com',
+                    contactEmail: currentRecord?.contactEmail || 'Drew.Shedd@martinmarietta.com',
                     availableStock: currentVolume,
-                    facilityAddress: currentRecord?.siteAddress || 'Contact facility for address',
-                    facilityHours: currentRecord?.siteHours || currentRecord?.hoursOfOperation || 'Contact for hours'
+                    facilityAddress: currentRecord?.address ? `${currentRecord.address}, ${currentRecord.city}, ${currentRecord.state} ${currentRecord.zip}` : 'Contact facility for address',
+                    facilityHours: currentRecord?.hoursOfOperation || 'Contact for hours'
                   };
                   navigation.navigate('OrderConfirmation', { orderData });
                 }}
@@ -660,11 +682,6 @@ const styles = StyleSheet.create({
   },
   headerContent: {
     flex: 1,
-  },
-  quvoLogo: {
-    width: 80,
-    height: 25,
-    resizeMode: 'contain',
   },
   bayName: {
     fontSize: 24,

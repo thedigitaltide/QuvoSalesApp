@@ -12,6 +12,7 @@ import {
   StatusBar,
   Modal,
   TextInput,
+  Image,
 } from 'react-native';
 import { FlatGrid } from 'react-native-super-grid';
 import { useAuth } from '../context/AuthContext';
@@ -45,7 +46,6 @@ const EnhancedDashboardScreen = ({ navigation }) => {
   const [selectedCustomer, setSelectedCustomer] = useState('martin-marietta');
   const [showCustomerModal, setShowCustomerModal] = useState(false);
   const [customers, setCustomers] = useState([]);
-  const [showRoleModal, setShowRoleModal] = useState(false);
 
   useEffect(() => {
     loadInitialData();
@@ -429,29 +429,27 @@ const EnhancedDashboardScreen = ({ navigation }) => {
         <View style={styles.headerTop}>
           <View style={styles.headerLeft}>
             <View style={styles.brandingRow}>
-              <TouchableOpacity 
-                style={styles.customerSelector}
-                onPress={() => setShowCustomerModal(true)}
-              >
-                <Text style={styles.brandText}>
-                  QUVO × {customers.find(c => c.id === selectedCustomer)?.name || 'Select Customer'}
-                </Text>
-                <Text style={styles.customerArrow}>▼</Text>
-              </TouchableOpacity>
+              <View style={styles.logoRow}>
+                <TouchableOpacity 
+                  style={styles.customerSelector}
+                  onPress={() => setShowCustomerModal(true)}
+                >
+                  <Text style={styles.brandText}>
+                    QUVO × {customers.find(c => c.id === selectedCustomer)?.name || 'Select Customer'}
+                  </Text>
+                  <Text style={styles.customerArrow}>▼</Text>
+                </TouchableOpacity>
+                <View style={styles.partnerLogoContainer}>
+                  <Image 
+                    source={require('../../assets/images/marietta.png')} 
+                    style={styles.partnerLogo}
+                    resizeMode="contain"
+                  />
+                </View>
+              </View>
             </View>
             <Text style={styles.welcomeText}>Hello, {user?.name?.split('.')[0] || 'User'}</Text>
-            <View style={styles.roleRow}>
-              <Text style={styles.territoryText}>Territory: Florida West Coast</Text>
-              <TouchableOpacity 
-                style={styles.roleSelector}
-                onPress={() => setShowRoleModal(true)}
-              >
-                <Text style={styles.roleText}>
-                  {userRole === 'sales-manager' ? '👨‍💼 Manager' : '👤 Sales Rep'}
-                </Text>
-                <Text style={styles.roleArrow}>▼</Text>
-              </TouchableOpacity>
-            </View>
+            <Text style={styles.territoryText}>Territory: Florida West Coast</Text>
             <TouchableOpacity 
               style={styles.facilitySelector}
               onPress={() => setShowFacilityModal(true)}
@@ -504,16 +502,6 @@ const EnhancedDashboardScreen = ({ navigation }) => {
               📍 Limited to assigned sites
             </Text>
           )}
-          {canEditPrices() && (
-            <TouchableOpacity 
-              style={styles.priceManagementButton}
-              onPress={() => navigation.navigate('PriceManagement')}
-            >
-              <Text style={styles.priceManagementButtonText}>
-                💰 Manage Pricing
-              </Text>
-            </TouchableOpacity>
-          )}
         </View>
       </View>
 
@@ -531,10 +519,10 @@ const EnhancedDashboardScreen = ({ navigation }) => {
       {/* Enhanced Bay Grid */}
       {filteredBays.length > 0 ? (
         <FlatGrid
-          itemDimension={(width - 48) / 2 - 8} // 2 columns with spacing
+          itemDimension={150}
           data={filteredBays}
           style={styles.gridList}
-          spacing={8}
+          spacing={12}
           renderItem={renderBayCard}
           refreshControl={
             <RefreshControl 
@@ -544,6 +532,9 @@ const EnhancedDashboardScreen = ({ navigation }) => {
             />
           }
           contentContainerStyle={styles.gridContent}
+          staticDimension={width - 32}
+          maxItemsPerRow={2}
+          itemContainerStyle={styles.gridItemContainer}
         />
       ) : (
         <View style={styles.emptyState}>
@@ -879,109 +870,6 @@ const EnhancedDashboardScreen = ({ navigation }) => {
         </View>
       </Modal>
 
-      {/* Role Selection Modal */}
-      <Modal
-        visible={showRoleModal}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setShowRoleModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Select Your Role</Text>
-            <Text style={styles.roleModalSubtitle}>
-              This determines what you can see and edit
-            </Text>
-            
-            {/* Sales Manager Option */}
-            <TouchableOpacity
-              style={[
-                styles.roleOption,
-                userRole === 'sales-manager' && styles.selectedRoleOption
-              ]}
-              onPress={() => {
-                switchRole('sales-manager');
-                setShowRoleModal(false);
-                // Reset selections when role changes
-                setSelectedCustomer('martin-marietta');
-                setSelectedFacility('all');
-              }}
-            >
-              <View style={styles.roleOptionContent}>
-                <Text style={styles.roleEmoji}>👨‍💼</Text>
-                <View style={styles.roleInfo}>
-                  <Text style={[
-                    styles.roleOptionTitle,
-                    userRole === 'sales-manager' && styles.selectedRoleOptionTitle
-                  ]}>
-                    Sales Manager
-                  </Text>
-                  <Text style={[
-                    styles.roleOptionDescription,
-                    userRole === 'sales-manager' && styles.selectedRoleOptionDescription
-                  ]}>
-                    • View all customers and sites{'\n'}
-                    • Edit pricing{'\n'}
-                    • View reports and analytics{'\n'}
-                    • Manage sales people
-                  </Text>
-                </View>
-              </View>
-              {userRole === 'sales-manager' && (
-                <Text style={styles.checkmark}>✓</Text>
-              )}
-            </TouchableOpacity>
-
-            {/* Sales Person Option */}
-            <TouchableOpacity
-              style={[
-                styles.roleOption,
-                userRole === 'sales-person' && styles.selectedRoleOption
-              ]}
-              onPress={() => {
-                // For demo, give sales person access to specific sites
-                const demoSites = ['martin-marietta_port-of-tampa', 'cemex_four-corners-sand'];
-                switchRole('sales-person', demoSites);
-                setShowRoleModal(false);
-                // Reset selections when role changes
-                setSelectedCustomer('martin-marietta');
-                setSelectedFacility('all');
-              }}
-            >
-              <View style={styles.roleOptionContent}>
-                <Text style={styles.roleEmoji}>👤</Text>
-                <View style={styles.roleInfo}>
-                  <Text style={[
-                    styles.roleOptionTitle,
-                    userRole === 'sales-person' && styles.selectedRoleOptionTitle
-                  ]}>
-                    Sales Representative
-                  </Text>
-                  <Text style={[
-                    styles.roleOptionDescription,
-                    userRole === 'sales-person' && styles.selectedRoleOptionDescription
-                  ]}>
-                    • View assigned sites only{'\n'}
-                    • Read-only pricing{'\n'}
-                    • Contact facility managers{'\n'}
-                    • Track inventory levels
-                  </Text>
-                </View>
-              </View>
-              {userRole === 'sales-person' && (
-                <Text style={styles.checkmark}>✓</Text>
-              )}
-            </TouchableOpacity>
-            
-            <TouchableOpacity
-              style={styles.modalCancelButton}
-              onPress={() => setShowRoleModal(false)}
-            >
-              <Text style={styles.modalCancelText}>Cancel</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
 
     </View>
   );
@@ -1027,7 +915,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   brandingRow: {
-    marginBottom: 8,
+    marginBottom: 12,
+    marginTop: 8,
   },
   customerSelector: {
     flexDirection: 'row',
@@ -1063,6 +952,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '400',
     flex: 1,
+    marginBottom: 8,
   },
   roleSelector: {
     flexDirection: 'row',
@@ -1642,6 +1532,24 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#7F8C8D',
     fontWeight: '600',
+  },
+  logoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  partnerLogoContainer: {
+    marginLeft: 12,
+  },
+  partnerLogo: {
+    width: 60,
+    height: 20,
+    opacity: 1.0,
+    tintColor: '#FFFFFF',
+  },
+  gridItemContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
 

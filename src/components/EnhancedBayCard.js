@@ -1,8 +1,9 @@
 import React from 'react';
 import { View, Text, StyleSheet, Dimensions, TouchableOpacity } from 'react-native';
+import Icon from 'react-native-vector-icons/FontAwesome';
 
 const { width } = Dimensions.get('window');
-const cardWidth = (width - 48) / 2; // 2 columns with spacing
+const cardWidth = (width - 56) / 2; // Account for padding and spacing
 
 const EnhancedBayCard = ({ record, storage, onPress }) => {
   const volume = parseFloat(record.volume || 0);
@@ -15,28 +16,28 @@ const EnhancedBayCard = ({ record, storage, onPress }) => {
       text: 'NEARLY FULL',
       color: '#FF6B6B',
       gradient: ['#FF6B6B', '#FF5252'],
-      icon: '●',
+      icon: 'exclamation-triangle',
       textColor: '#FFFFFF'
     };
     if (utilizationPercent >= 70) return {
       text: 'HIGH LEVEL',
       color: '#FFB74D',
       gradient: ['#FFB74D', '#FFA726'],
-      icon: '●',
+      icon: 'warning',
       textColor: '#FFFFFF'
     };
     if (utilizationPercent >= 30) return {
       text: 'AVAILABLE',
       color: '#4CAF50',
       gradient: ['#4CAF50', '#66BB6A'],
-      icon: '●',
+      icon: 'check-circle',
       textColor: '#FFFFFF'
     };
     return {
       text: 'LOW LEVEL',
       color: '#9E9E9E',
       gradient: ['#9E9E9E', '#BDBDBD'],
-      icon: '●',
+      icon: 'minus-circle',
       textColor: '#FFFFFF'
     };
   };
@@ -89,9 +90,7 @@ const EnhancedBayCard = ({ record, storage, onPress }) => {
       <View style={styles.card}>
         {/* Status Badge */}
         <View style={[styles.statusBadge, { backgroundColor: status.color }]}>
-          <Text style={[styles.statusIcon, { color: status.textColor }]}>
-            {status.icon}
-          </Text>
+          <Icon name={status.icon} size={10} color={status.textColor} style={styles.statusIcon} />
           <Text style={[styles.statusText, { color: status.textColor }]}>
             {status.text}
           </Text>
