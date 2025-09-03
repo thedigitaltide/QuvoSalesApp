@@ -16,6 +16,7 @@ import {
 import { LineChart } from 'react-native-chart-kit';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import api from '../services/api';
+import quvoApi from '../services/quvoApi';
 
 const { width } = Dimensions.get('window');
 
@@ -26,9 +27,11 @@ const BayDetailScreen = ({ route, navigation }) => {
   const [loading, setLoading] = useState(true);
   const [selectedTimeRange, setSelectedTimeRange] = useState('7d');
   const [selectedQuantity, setSelectedQuantity] = useState(100); // Default 100 units
+  const [facilityContact, setFacilityContact] = useState(null);
 
   useEffect(() => {
     loadHistoricalData();
+    loadFacilityContact();
   }, [selectedTimeRange]);
 
   const loadHistoricalData = async () => {
@@ -87,28 +90,58 @@ const BayDetailScreen = ({ route, navigation }) => {
     }
   };
 
+  const loadFacilityContact = async () => {
+    try {
+      const facilityName = currentRecord?.facilityName;
+      if (!facilityName) return;
+
+      quvoApi.setClient('martin-marietta');
+      const response = await quvoApi.getFacilities();
+      const facilities = response.facilities || [];
+      
+      // Find the facility that matches the current record's facility name
+      const facility = facilities.find(f => f.name === facilityName);
+      if (facility) {
+        setFacilityContact({
+          contactName: facility.contactName || 'Contact',
+          contactTitle: facility.contactTitle || 'Representative', 
+          contactPhone: facility.contactPhone || facility.officePhone,
+          contactEmail: facility.contactEmail,
+          officePhone: facility.officePhone
+        });
+      }
+    } catch (error) {
+      console.error('Error loading facility contact:', error);
+    }
+  };
+
   const getStatusInfo = (volume, maxVolume) => {
     const utilizationPercent = Math.min((volume / maxVolume) * 100, 100);
     
-    if (utilizationPercent >= 90) return {
-      text: 'NEARLY FULL',
-      color: '#FF6B6B',
-      icon: 'warning',
+    if (volume === 0) return {
+      text: 'EMPTY',
+      color: '#9E9E9E',
+      icon: 'battery-empty',
     };
-    if (utilizationPercent >= 70) return {
-      text: 'HIGH LEVEL',
-      color: '#FFB74D',
-      icon: 'arrow-up',
+    if (utilizationPercent >= 75) return {
+      text: 'HIGH STOCK',
+      color: '#10B981', // Green for high availability
+      icon: 'battery-full',
     };
-    if (utilizationPercent >= 30) return {
-      text: 'AVAILABLE',
-      color: '#4CAF50',
-      icon: 'check',
+    if (utilizationPercent >= 50) return {
+      text: 'GOOD STOCK',
+      color: '#3B82F6', // Blue for medium availability  
+      icon: 'battery-three-quarters',
+    };
+    if (utilizationPercent >= 25) return {
+      text: 'LOW STOCK',
+      color: '#F59E0B', // Yellow for low availability
+      icon: 'battery-quarter',
     };
     return {
-      text: 'LOW LEVEL',
-      color: '#9E9E9E',
-      icon: 'arrow-down',
+      text: 'CRITICAL',
+      color: '#EF4444', // Red for very low availability
+      icon: 'exclamation-triangle',
     };
   };
 
@@ -313,7 +346,7 @@ const BayDetailScreen = ({ route, navigation }) => {
             <TouchableOpacity 
               style={styles.contactButton}
               onPress={() => {
-                const phone = currentRecord?.contactPhone || '(706) 524-6274';
+                const phone = facilityContact?.contactPhone || currentRecord?.contactPhone || '(706) 524-6274';
                 Linking.openURL(`tel:${phone}`);
               }}
             >
@@ -321,7 +354,10 @@ const BayDetailScreen = ({ route, navigation }) => {
               <View style={styles.contactButtonContent}>
                 <Text style={styles.contactButtonText}>Call Sales Rep</Text>
                 <Text style={styles.contactButtonSubtext}>
-                  {`${currentRecord?.contactName || 'Drew Shedd'} ${currentRecord?.contactPhone || '(706) 524-6274'}`}
+                  {facilityContact?.contactName || currentRecord?.contactName || 'Drew Shedd'}
+                </Text>
+                <Text style={styles.contactButtonSubtext}>
+                  {facilityContact?.contactPhone || currentRecord?.contactPhone || '(706) 524-6274'}
                 </Text>
               </View>
             </TouchableOpacity>
@@ -329,7 +365,7 @@ const BayDetailScreen = ({ route, navigation }) => {
             <TouchableOpacity 
               style={[styles.contactButton, styles.emailButton]}
               onPress={() => {
-                const email = currentRecord?.contactEmail || 'Drew.Shedd@martinmarietta.com';
+                const email = facilityContact?.contactEmail || currentRecord?.contactEmail || 'Drew.Shedd@martinmarietta.com';
                 Linking.openURL(`mailto:${email}`);
               }}
             >
@@ -337,11 +373,10 @@ const BayDetailScreen = ({ route, navigation }) => {
               <View style={styles.contactButtonContent}>
                 <Text style={styles.contactButtonText}>Email Sales Rep</Text>
                 <Text style={styles.contactButtonSubtext}>
-                  {currentRecord?.contactEmail ? (
-                    currentRecord.contactEmail.length > 20 
-                      ? currentRecord.contactEmail.substring(0, 15) + '...'
-                      : currentRecord.contactEmail
-                  ) : 'Drew.Shedd@martinmarietta.com'}
+                  {(() => {
+                    const email = facilityContact?.contactEmail || currentRecord?.contactEmail || 'Drew.Shedd@martinmarietta.com';
+                    return email.length > 20 ? email.substring(0, 15) + '...' : email;
+                  })()}
                 </Text>
               </View>
             </TouchableOpacity>
@@ -350,8 +385,12 @@ const BayDetailScreen = ({ route, navigation }) => {
           <View style={styles.salesRepInfo}>
             <Icon name="user" size={14} color="#7F8C8D" />
             <View style={styles.salesRepDetails}>
-              <Text style={styles.salesRepName}>Drew Shedd</Text>
-              <Text style={styles.salesRepTitle}>Sales Representative</Text>
+              <Text style={styles.salesRepName}>
+                {facilityContact?.contactName || currentRecord?.contactName || 'Drew Shedd'}
+              </Text>
+              <Text style={styles.salesRepTitle}>
+                {facilityContact?.contactTitle || currentRecord?.contactTitle || 'Sales Representative'}
+              </Text>
             </View>
           </View>
         </View>
@@ -508,11 +547,11 @@ const BayDetailScreen = ({ route, navigation }) => {
                     unitType: unitType,
                     pricePerUnit: pricePerTon,
                     totalPrice: pricePerTon * selectedQuantity,
-                    contactPhone: currentRecord?.officePhone || currentRecord?.contactPhone || '(813) 261-1764',
-                    salesRepPhone: currentRecord?.contactPhone || '(706) 524-6274',
-                    contactName: currentRecord?.contactName || 'Drew Shedd',
-                    contactTitle: currentRecord?.contactTitle || 'Sales Representative',
-                    contactEmail: currentRecord?.contactEmail || 'Drew.Shedd@martinmarietta.com',
+                    contactPhone: facilityContact?.officePhone || currentRecord?.officePhone || currentRecord?.contactPhone || '(813) 261-1764',
+                    salesRepPhone: facilityContact?.contactPhone || currentRecord?.contactPhone || '(706) 524-6274',
+                    contactName: facilityContact?.contactName || currentRecord?.contactName || 'Drew Shedd',
+                    contactTitle: facilityContact?.contactTitle || currentRecord?.contactTitle || 'Sales Representative',
+                    contactEmail: facilityContact?.contactEmail || currentRecord?.contactEmail || 'Drew.Shedd@martinmarietta.com',
                     availableStock: currentVolume,
                     facilityAddress: currentRecord?.address ? `${currentRecord.address}, ${currentRecord.city}, ${currentRecord.state} ${currentRecord.zip}` : 'Contact facility for address',
                     facilityHours: currentRecord?.hoursOfOperation || 'Contact for hours'

@@ -8,6 +8,7 @@ import {
   ScrollView,
   TextInput 
 } from 'react-native';
+import Icon from 'react-native-vector-icons/FontAwesome';
 import DateTimePicker from '@react-native-community/datetimepicker';
 
 const { width } = Dimensions.get('window');
@@ -33,10 +34,10 @@ const FilterControls = ({
   ];
 
   const materialOptions = [
-    { key: 'all', label: 'All Materials', icon: '●' },
-    { key: 'plastic', label: 'Plastics/Cans', icon: '●' },
-    { key: 'recyclate', label: 'Recyclate', icon: '●' },
-    { key: 'msw', label: 'MSW', icon: '●' }
+    { key: 'all', label: 'All Materials', icon: 'circle' },
+    { key: 'plastic', label: 'Plastics/Cans', icon: 'circle' },
+    { key: 'recyclate', label: 'Recyclate', icon: 'circle' },
+    { key: 'msw', label: 'MSW', icon: 'circle' }
   ];
 
   const handleDateChange = (event, selectedDate) => {
@@ -141,7 +142,7 @@ const FilterControls = ({
               ]}
               onPress={() => onMaterialFilter(option.key)}
             >
-              <View style={styles.materialIcon} />
+              <Icon name={option.icon} size={8} color={materialFilter === option.key ? '#FFFFFF' : '#7F8C8D'} />
               <Text style={[
                 styles.materialChipText,
                 materialFilter === option.key && styles.materialChipTextActive

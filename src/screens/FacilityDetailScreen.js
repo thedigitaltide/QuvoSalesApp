@@ -10,6 +10,7 @@ import {
   StatusBar,
   Dimensions,
 } from 'react-native';
+import Icon from 'react-native-vector-icons/FontAwesome';
 import martinMariettaDataService from '../services/martinMariettaData';
 
 const { width } = Dimensions.get('window');
@@ -134,7 +135,7 @@ const FacilityDetailScreen = ({ route, navigation }) => {
                   style={styles.contactButton}
                   onPress={() => handlePhoneCall(facility.contactPhone)}
                 >
-                  <Text style={styles.contactButtonText}>📞 {facility.contactPhone}</Text>
+                  <Text style={styles.contactButtonText}><Icon name="phone" size={14} color="#FFFFFF" /> {facility.contactPhone}</Text>
                 </TouchableOpacity>
               )}
               {facility.contactEmail && (
@@ -162,7 +163,7 @@ const FacilityDetailScreen = ({ route, navigation }) => {
                     style={styles.contactButton}
                     onPress={() => handlePhoneCall(facility.secondaryContactPhone)}
                   >
-                    <Text style={styles.contactButtonText}>📞 {facility.secondaryContactPhone}</Text>
+                    <Text style={styles.contactButtonText}><Icon name="phone" size={14} color="#FFFFFF" /> {facility.secondaryContactPhone}</Text>
                   </TouchableOpacity>
                 )}
                 {facility.secondaryContactEmail && (

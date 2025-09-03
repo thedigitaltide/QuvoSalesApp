@@ -329,6 +329,84 @@ platform :ios do
     UI.success("✅ Upload complete! Check App Store Connect.")
   end
 
+  # Simple upload lane that skips certificate management
+  desc "Simple TestFlight upload without certificate checks"
+  lane :simple_testflight_upload do
+    # Setup API key authentication only
+    if ENV["APP_STORE_CONNECT_API_KEY_ID"] && ENV["APP_STORE_CONNECT_ISSUER_ID"] && File.exist?(ENV["APP_STORE_CONNECT_API_KEY_FILEPATH"])
+      UI.message("🔑 Using App Store Connect API key for authentication...")
+      app_store_connect_api_key(
+        key_id: ENV["APP_STORE_CONNECT_API_KEY_ID"],
+        issuer_id: ENV["APP_STORE_CONNECT_ISSUER_ID"],
+        key_filepath: ENV["APP_STORE_CONNECT_API_KEY_FILEPATH"],
+        duration: 1200,
+        in_house: false
+      )
+    end
+    
+    # Upload to TestFlight directly
+    upload_to_testflight(
+      ipa: "fastlane/builds/QuvoSalesApp.ipa",
+      skip_waiting_for_build_processing: true,
+      changelog: "QuvoSalesApp - Martin Marietta Sales Demo with fixed company logos\n\nFeatures:\n• Correct Marietta and CEMEX logos\n• Real facility data and contacts\n• Professional UI with FontAwesome icons\n• Order confirmation with email integration",
+      distribute_external: false,
+      groups: ["Internal Testing"],
+      submit_beta_review: false
+    )
+    
+    UI.success("✅ TestFlight upload complete! Check App Store Connect for processing status.")
+  end
+
+  # Apple ID authentication upload (bypass API key issues)
+  desc "TestFlight upload using Apple ID authentication"
+  lane :testflight_apple_id do
+    # Force Apple ID authentication by not setting up API key
+    UI.message("🍎 Using Apple ID authentication (interactive login required)")
+    
+    # Upload to TestFlight directly without API key setup
+    upload_to_testflight(
+      ipa: "fastlane/builds/QuvoSalesApp.ipa",
+      skip_waiting_for_build_processing: true,
+      changelog: "QuvoSalesApp - Martin Marietta Sales Demo with fixed company logos\n\nFeatures:\n• Correct Marietta and CEMEX logos\n• Real facility data and contacts\n• Professional UI with FontAwesome icons\n• Order confirmation with email integration",
+      distribute_external: false,
+      groups: ["Internal Testing"],
+      submit_beta_review: false,
+      username: ENV["FASTLANE_USER"] || "bob@digitalti.de",
+      team_id: ENV["FASTLANE_TEAM_ID"] || "MSMA322M62"
+    )
+    
+    UI.success("✅ TestFlight upload complete! Check App Store Connect for processing status.")
+  end
+
+  # Direct iTMSTransporter upload (most reliable method)
+  desc "Upload to TestFlight using iTMSTransporter directly"
+  lane :upload_transporter do
+    UI.message("📤 Using iTMSTransporter for direct upload...")
+    
+    # Check if IPA exists (use absolute path)
+    ipa_path = File.expand_path("../fastlane/builds/QuvoSalesApp.ipa")
+    unless File.exist?(ipa_path)
+      UI.user_error!("IPA file not found at #{ipa_path}. Run build first.")
+    end
+    
+    UI.message("📁 Found IPA at: #{ipa_path}")
+    
+    # Use iTMSTransporter directly with API key
+    if ENV["APP_STORE_CONNECT_API_KEY_ID"] && ENV["APP_STORE_CONNECT_ISSUER_ID"] && File.exist?(ENV["APP_STORE_CONNECT_API_KEY_FILEPATH"])
+      UI.message("🔑 Using App Store Connect API key with iTMSTransporter...")
+      
+      # iTMSTransporter -k expects the directory containing the private key
+      key_dir = File.dirname(ENV["APP_STORE_CONNECT_API_KEY_FILEPATH"])
+      UI.message("🔑 Using key directory: #{key_dir}")
+      
+      sh("xcrun iTMSTransporter -m upload -f '#{ipa_path}' -apiKey #{ENV['APP_STORE_CONNECT_API_KEY_ID']} -apiIssuer #{ENV['APP_STORE_CONNECT_ISSUER_ID']} -k '#{key_dir}'")
+    else
+      UI.user_error!("API key environment variables not set properly")
+    end
+    
+    UI.success("✅ iTMSTransporter upload complete! Check App Store Connect for processing status.")
+  end
+
   # Helper method to setup keychain for CI/local development
   private_lane :setup_keychain do
     # Setup App Store Connect API Key for authentication
@@ -490,6 +568,40 @@ platform :ios do
     UI.important("📁 File: #{lane_context[SharedValues::IPA_OUTPUT_PATH]}")
   end
   
+  desc "Generate App Store screenshots"
+  lane :screenshots do
+    setup_keychain
+    
+    UI.header("📸 Generating App Store Screenshots")
+    
+    # Build for simulator with xcodebuild directly
+    xcodebuild(
+      scheme: "QuvoSalesApp",
+      workspace: "ios/QuvoSalesApp.xcworkspace",
+      configuration: "Release",
+      destination: "platform=iOS Simulator,name=iPhone 16 Pro,OS=18.4",
+      derived_data_path: "fastlane/DerivedData",
+      build_for_testing: true
+    )
+    
+    # Generate screenshots using fastlane snapshot
+    snapshot(
+      workspace: "ios/QuvoSalesApp.xcworkspace",
+      scheme: "QuvoSalesApp",
+      devices: [
+        "iPhone 16 Pro Max",
+        "iPhone 16 Pro",
+        "iPad Pro 13-inch (M4)"
+      ],
+      languages: ["en-US"],
+      output_directory: "fastlane/screenshots",
+      override_status_bar: true,
+      clean: true
+    )
+    
+    UI.success("✅ Screenshots generated in fastlane/screenshots/")
+  end
+
   desc "Show distribution instructions"
   lane :distribution_guide do
     UI.header("📱 QuvoSalesApp Distribution Options")

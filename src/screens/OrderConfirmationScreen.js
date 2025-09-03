@@ -185,7 +185,7 @@ For questions, please contact the sales agent directly.`;
 
         <ScrollView style={styles.emailContainer}>
           <View style={styles.emailHeader}>
-            <Text style={styles.emailTitle}>📧 Order Email Sent</Text>
+            <Text style={styles.emailTitle}><Icon name="envelope" size={16} color="#4CAF50" /> Order Email Sent</Text>
             <Text style={styles.emailSubtitle}>To: {orderData.contactEmail}</Text>
             <Text style={styles.emailTimestamp}>
               Sent: {new Date().toLocaleString()}

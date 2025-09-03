@@ -1,1555 +1,753 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
-  ScrollView,
   StyleSheet,
-  RefreshControl,
-  ActivityIndicator,
-  Alert,
-  TouchableOpacity,
-  Dimensions,
-  StatusBar,
-  Modal,
-  TextInput,
   Image,
+  TouchableOpacity,
+  ScrollView,
+  ActivityIndicator,
+  RefreshControl,
+  TextInput,
+  Modal,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { FlatGrid } from 'react-native-super-grid';
-import { useAuth } from '../context/AuthContext';
+import Icon from 'react-native-vector-icons/FontAwesome';
 import EnhancedBayCard from '../components/EnhancedBayCard';
-import MinimalFilterControls from '../components/MinimalFilterControls';
-import api from '../services/api';
 import martinMariettaDataService from '../services/martinMariettaData';
-import customerDataService from '../services/customerDataService';
 
-const { width, height } = Dimensions.get('window');
+// Import logos to ensure they're bundled
+const mariettaLogo = require('../../assets/images/marietta.png');
+const cemexLogo = require('../../assets/images/cemex.png');
 
-const EnhancedDashboardScreen = ({ navigation }) => {
-  const { user, logout, userRole, switchRole, canEditPrices, canViewAllSites } = useAuth();
+const EnhancedDashboardScreen = ({ navigation, route }) => {
+  const companyData = route.params?.companyData || { 
+    company: 'martinmarietta', 
+    companyName: 'Martin Marietta' 
+  };
   const [dashboardData, setDashboardData] = useState(null);
   const [projects, setProjects] = useState([]);
+  const [filteredProjects, setFilteredProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  
-  // Filter states
-  const [selectedDate, setSelectedDate] = useState(new Date());
-  const [availabilityFilter, setAvailabilityFilter] = useState('all');
+  const [selectedState, setSelectedState] = useState('');
+  const [selectedMaterial, setSelectedMaterial] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedFacility, setSelectedFacility] = useState('all');
-  const [showFacilityModal, setShowFacilityModal] = useState(false);
-  const [facilities, setFacilities] = useState([]);
-  const [facilityGroups, setFacilityGroups] = useState({});
-  const [selectedState, setSelectedState] = useState('all');
-  const [showStateModal, setShowStateModal] = useState(false);
-  const [facilitySearchQuery, setFacilitySearchQuery] = useState('');
-  const [selectedProductCategory, setSelectedProductCategory] = useState('all');
-  const [selectedCustomer, setSelectedCustomer] = useState('martin-marietta');
-  const [showCustomerModal, setShowCustomerModal] = useState(false);
-  const [customers, setCustomers] = useState([]);
+  const [states, setStates] = useState([]);
+  const [materials, setMaterials] = useState([]);
+  const [showFilterModal, setShowFilterModal] = useState(false);
 
   useEffect(() => {
-    loadInitialData();
+    loadData();
   }, []);
 
+  // Filter effect with material support
   useEffect(() => {
-    loadCustomers();
-    loadFacilities();
-  }, []);
-
-  useEffect(() => {
-    // Reload facilities when customer changes
-    if (selectedCustomer) {
-      loadFacilities();
-      setSelectedFacility('all'); // Reset facility selection
-    }
-  }, [selectedCustomer]);
-
-  const loadCustomers = () => {
-    try {
-      const allCustomers = customerDataService.getAllCustomers();
-      setCustomers(allCustomers);
-      console.log(`Loaded ${allCustomers.length} customers:`, allCustomers.map(c => c.name).join(', '));
-    } catch (error) {
-      console.error('Failed to load customers:', error);
-    }
-  };
-
-  const loadFacilities = () => {
-    try {
-      if (selectedCustomer === 'martin-marietta') {
-        // Use Martin Marietta data service for backward compatibility
-        const allFacilities = martinMariettaDataService.getAllFacilities();
-        const facilitiesByState = martinMariettaDataService.facilitiesByState;
-        
-        // Create facilities list with "All" option
-        const facilityOptions = [
-          { id: 'all', name: 'All Facilities', state: 'all' }
-        ];
-        
-        allFacilities.forEach(facility => {
-          facilityOptions.push({
-            id: facility.facilityId.toString(),
-            name: facility.name,
-            state: facility.state,
-            facility: facility
-          });
-        });
-
-        setFacilities(facilityOptions);
-        setFacilityGroups(facilitiesByState);
-        
-        console.log(`Loaded ${allFacilities.length} Martin Marietta facilities across ${Object.keys(facilitiesByState).length} states`);
-      } else {
-        // Use customer data service for specific customer sites
-        const customerSites = customerDataService.getCustomerSites(selectedCustomer);
-        
-        const facilityOptions = [
-          { id: 'all', name: 'All Sites', state: 'all' }
-        ];
-        
-        customerSites.forEach(site => {
-          facilityOptions.push({
-            id: site.id,
-            name: site.name,
-            state: site.state,
-            city: site.city,
-            facility: site
-          });
-        });
-
-        // Group by state for consistency
-        const sitesByState = {};
-        customerSites.forEach(site => {
-          if (!sitesByState[site.state]) sitesByState[site.state] = [];
-          sitesByState[site.state].push(site);
-        });
-
-        setFacilities(facilityOptions);
-        setFacilityGroups(sitesByState);
-        
-        const customer = customerDataService.getCustomer(selectedCustomer);
-        console.log(`Loaded ${customerSites.length} ${customer?.name || 'Customer'} sites across ${Object.keys(sitesByState).length} states`);
-      }
-    } catch (error) {
-      console.error('Failed to load facilities:', error);
-    }
-  };
-
-  // Filter facilities for display in modal
-  const getFilteredFacilities = () => {
-    let facilitiesToShow = [];
+    let filtered = projects;
     
-    if (selectedCustomer === 'martin-marietta') {
-      facilitiesToShow = martinMariettaDataService.getAllFacilities();
-    } else {
-      facilitiesToShow = customerDataService.getCustomerSites(selectedCustomer);
+    if (selectedState) {
+      filtered = filtered.filter(project => project.state === selectedState);
     }
     
-    // Filter by search query
-    if (facilitySearchQuery.trim()) {
-      const query = facilitySearchQuery.toLowerCase();
-      facilitiesToShow = facilitiesToShow.filter(facility =>
-        facility.name.toLowerCase().includes(query) ||
-        facility.city.toLowerCase().includes(query) ||
-        facility.state.toLowerCase().includes(query) ||
-        facility.productsAvailable?.toLowerCase().includes(query) ||
-        Object.values(facility.products || {}).some(product =>
-          product.name?.toLowerCase().includes(query) ||
-          product.description?.toLowerCase().includes(query)
-        )
+    if (selectedMaterial) {
+      filtered = filtered.filter(project => 
+        project.materialType === selectedMaterial || 
+        project.products?.includes(selectedMaterial)
       );
     }
-
-    // Filter by state
-    if (selectedState !== 'all') {
-      facilitiesToShow = facilitiesToShow.filter(facility => facility.state === selectedState);
+    
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(project => 
+        project.name?.toLowerCase().includes(query) ||
+        project.city?.toLowerCase().includes(query) ||
+        project.state?.toLowerCase().includes(query) ||
+        project.materialType?.toLowerCase().includes(query) ||
+        project.address?.toLowerCase().includes(query)
+      );
     }
+    
+    setFilteredProjects(filtered);
+  }, [projects, selectedState, selectedMaterial, searchQuery]);
 
-    // Filter by product category
-    if (selectedProductCategory !== 'all') {
-      if (selectedCustomer === 'martin-marietta') {
-        facilitiesToShow = facilitiesToShow.filter(facility =>
-          facility.products?.includes(selectedProductCategory) ||
-          facility.detailedProducts?.some(p => p.category === selectedProductCategory)
-        );
-      } else {
-        facilitiesToShow = facilitiesToShow.filter(facility =>
-          Object.values(facility.products || {}).some(product => 
-            product.category === selectedProductCategory
-          )
-        );
+  const generateCemexData = () => {
+    // CEMEX facilities data focused on 4 Corners area with three key divisions
+    const cemexFacilities = [
+      // AGGREGATES DIVISION - The division you've already shown the product to
+      {
+        facilityId: 'CEX_AGG_001',
+        name: 'CEMEX 4 Corners Sand Facility',
+        division: 'Aggregates',
+        address: '4 Corners Sand Facility',
+        city: 'Farmington',
+        state: 'New Mexico',
+        zip: '87401',
+        latitude: '36.7280',
+        longitude: '-108.2187',
+        contactName: 'Aggregates Division Manager',
+        contactTitle: 'Division Manager - Aggregates',
+        contactEmail: 'aggregates.4corners@cemex.com',
+        contactPhone: '(505) 327-4000',
+        products: ['Aggregates', 'Sand', 'Gravel'],
+        hoursOfOperation: 'Mon - Fri | 6:00 AM - 5:00 PM',
+        notes: 'Primary contact - already shown Quvo product'
+      },
+      {
+        facilityId: 'CEX_AGG_002',
+        name: 'CEMEX Durango Aggregates',
+        division: 'Aggregates',
+        address: '2500 Highway 550',
+        city: 'Durango',
+        state: 'Colorado',
+        zip: '81301',
+        latitude: '37.2753',
+        longitude: '-107.8801',
+        contactName: 'Site Operations Manager',
+        contactTitle: 'Operations Manager',
+        contactEmail: 'durango.ops@cemex.com',
+        contactPhone: '(970) 247-3200',
+        products: ['Aggregates', 'Crushed Stone'],
+        hoursOfOperation: 'Mon - Fri | 6:00 AM - 4:30 PM'
+      },
+      
+      // READY MIX DIVISION - President you know personally
+      {
+        facilityId: 'CEX_RMX_001',
+        name: 'CEMEX Ready Mix - 4 Corners',
+        division: 'Ready Mix',
+        address: '4 Corners Ready Mix Plant',
+        city: 'Farmington',
+        state: 'New Mexico',
+        zip: '87401',
+        latitude: '36.7280',
+        longitude: '-108.2187',
+        contactName: 'Ready Mix Division President',
+        contactTitle: 'Division President - Ready Mix',
+        contactEmail: 'president.readymix@cemex.com',
+        contactPhone: '(505) 327-5000',
+        products: ['Ready Mixed Concrete', 'Specialty Concrete'],
+        hoursOfOperation: 'Mon - Fri | 5:00 AM - 4:00 PM',
+        notes: 'Key contact - Ready Mix Division President (known personally)'
+      },
+      {
+        facilityId: 'CEX_RMX_002',
+        name: 'CEMEX Ready Mix - Aztec',
+        division: 'Ready Mix',
+        address: '1200 West Aztec Blvd',
+        city: 'Aztec',
+        state: 'New Mexico',
+        zip: '87410',
+        latitude: '36.8379',
+        longitude: '-108.0015',
+        contactName: 'Plant Manager',
+        contactTitle: 'Plant Manager',
+        contactEmail: 'aztec.plant@cemex.com',
+        contactPhone: '(505) 334-7500',
+        products: ['Ready Mixed Concrete'],
+        hoursOfOperation: 'Mon - Fri | 5:30 AM - 4:00 PM'
+      },
+      
+      // CEMENT DIVISION - Target division
+      {
+        facilityId: 'CEX_CEM_001',
+        name: 'CEMEX Cement - Lyons Terminal',
+        division: 'Cement',
+        address: '500 Industrial Drive',
+        city: 'Lyons',
+        state: 'Colorado',
+        zip: '80540',
+        latitude: '40.2236',
+        longitude: '-105.2619',
+        contactName: 'Cement Division Manager',
+        contactTitle: 'Division Manager - Cement',
+        contactEmail: 'cement.lyons@cemex.com',
+        contactPhone: '(303) 823-6000',
+        products: ['Cement', 'Bulk Cement'],
+        hoursOfOperation: 'Mon - Fri | 6:00 AM - 5:00 PM',
+        notes: 'Target division for Quvo expansion'
+      },
+      {
+        facilityId: 'CEX_CEM_002',
+        name: 'CEMEX Cement - Pueblo Terminal',
+        division: 'Cement',
+        address: '3400 Dillon Drive',
+        city: 'Pueblo',
+        state: 'Colorado',
+        zip: '81008',
+        latitude: '38.2544',
+        longitude: '-104.6091',
+        contactName: 'Terminal Operations Manager',
+        contactTitle: 'Operations Manager',
+        contactEmail: 'pueblo.terminal@cemex.com',
+        contactPhone: '(719) 545-8200',
+        products: ['Cement', 'Specialty Cement'],
+        hoursOfOperation: 'Mon - Fri | 6:00 AM - 4:30 PM'
       }
-    }
+    ];
 
-    return facilitiesToShow;
+    return cemexFacilities;
   };
 
-  const loadInitialData = async () => {
+  const loadData = async () => {
     try {
       setLoading(true);
-      await Promise.all([
-        loadProjects(),
-        loadDashboardData(),
-      ]);
+      
+      let facilities = [];
+      let allStates = [];
+      
+      if (companyData.company === 'cemex') {
+        // Generate mock CEMEX data
+        facilities = generateCemexData();
+        allStates = [...new Set(facilities.map(f => f.state))].sort();
+      } else {
+        // Load Martin Marietta facility data
+        facilities = martinMariettaDataService.getAllFacilities();
+        allStates = martinMariettaDataService.getAllStates();
+      }
+      
+      setDashboardData({ facilities });
+      setStates(allStates);
+      
+      // Extract unique materials for filtering
+      const uniqueMaterials = [...new Set(facilities.flatMap(f => f.products || []))].sort();
+      setMaterials(uniqueMaterials);
+      
+      // Transform facilities into bay data with proper mapping for EnhancedBayCard
+      const bayData = facilities.map((facility, index) => {
+        const volume = Math.floor(Math.random() * 1000 + 500); // Random volume 500-1500
+        const maxVolume = Math.floor(Math.random() * 500 + 1500); // Random max volume 1500-2000
+        const allMaterials = facility.products || ['Aggregates'];
+        
+        // Shorten material names to fit better
+        const shortenedMaterials = allMaterials.map(material => {
+          return material
+            .replace('Ready Mixed Concrete', 'RMC')
+            .replace('Aggregates', 'Agg')
+            .replace('Magnesia Specialties', 'Magnesia')
+            .replace('Asphalt Paving Mix', 'Asphalt');
+        });
+        
+        const materialType = shortenedMaterials.length > 1 
+          ? shortenedMaterials.slice(0, 2).join(', ') + (shortenedMaterials.length > 2 ? '...' : '')
+          : shortenedMaterials[0];
+        
+        return {
+          // IDs and Keys
+          id: facility.facilityId || index,
+          facilityId: facility.facilityId,
+          uniqueId: `facility_${facility.facilityId}_${index}`,
+          
+          // Names and Titles (for EnhancedBayCard)
+          name: facility.name,
+          zoneName: facility.name, // EnhancedBayCard looks for zoneName first
+          facilityName: facility.name, // EnhancedBayCard looks for facilityName
+          
+          // Location Data
+          location: `${facility.city}, ${facility.state}`,
+          address: facility.address,
+          city: facility.city,
+          state: facility.state,
+          zip: facility.zip,
+          latitude: parseFloat(facility.latitude) || 0,
+          longitude: parseFloat(facility.longitude) || 0,
+          
+          // Material and Product Data (for EnhancedBayCard)
+          materialType: materialType,
+          material: materialType,
+          products: facility.products || ['Aggregates'],
+          productsAvailable: facility.productsAvailable,
+          originalMaterials: allMaterials, // Store original full names for ordering
+          
+          // Volume and Capacity Data (for EnhancedBayCard)
+          volume: volume,
+          maxVolume: maxVolume,
+          unitType: materialType === 'Ready Mixed Concrete' ? 'cubic yards' : 'tons',
+          
+          // Pricing (random for now)
+          pricePerTon: Math.floor(Math.random() * 50 + 20), // $20-70 per ton
+          
+          // Contact Information
+          contactName: facility.contactName,
+          contactTitle: facility.contactTitle,
+          contactEmail: facility.contactEmail,
+          contactPhone: facility.contactPhone,
+          officePhone: facility.officePhone,
+          hoursOfOperation: facility.hoursOfOperation,
+          
+          // Status
+          status: 'Available',
+          capacity: Math.floor(Math.random() * 40 + 60), // Random capacity 60-100%
+          availability: Math.floor(Math.random() * 20 + 80), // Random availability 80-100%
+          
+          // Store original facility data
+          originalFacility: facility
+        };
+      });
+      
+      setProjects(bayData);
+      setFilteredProjects(bayData);
     } catch (error) {
-      console.error('Failed to load initial data:', error);
-      Alert.alert('Error', 'Failed to load data. Please try again.');
+      console.error('Error loading dashboard data:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const loadProjects = async () => {
-    try {
-      const projectsData = await api.getProjects();
-      console.log('Projects data:', JSON.stringify(projectsData, null, 2));
-      setProjects(projectsData);
-    } catch (error) {
-      console.error('Failed to load projects:', error);
-    }
-  };
-
-  const loadDashboardData = async () => {
-    try {
-      const data = await api.getBayData();
-      console.log('Raw API data structure:', JSON.stringify(data, null, 2));
-      console.log('Records sample:', data?.recordsById ? Object.keys(data.recordsById).slice(0, 5) : 'No records');
-      console.log('Storages sample:', data?.storagesById ? Object.keys(data.storagesById).slice(0, 5) : 'No storages');
-      setDashboardData(data);
-    } catch (error) {
-      console.error('Failed to load dashboard data:', error);
-      throw error;
-    }
-  };
-
-  const handleRefresh = async () => {
+  const onRefresh = async () => {
     setRefreshing(true);
-    try {
-      await loadDashboardData();
-    } catch (error) {
-      Alert.alert('Refresh Failed', 'Unable to update data. Please try again.');
-    } finally {
-      setRefreshing(false);
-    }
+    await loadData();
+    setRefreshing(false);
   };
 
-  // Generate facility-specific bays using customer data
-  const generateFacilityBays = () => {
-    const facilityBays = {};
-    
-    facilities.forEach(facility => {
-      if (facility.id === 'all') return;
-      
-      const facilityData = facility.facility;
-      if (!facilityData) return;
-      
-      if (selectedCustomer === 'martin-marietta') {
-        // Use Martin Marietta data service for backward compatibility
-        const bays = martinMariettaDataService.generateFacilityBays(facilityData.facilityId);
-        facilityBays[facility.id] = bays;
-      } else {
-        // Use customer data service for other customers
-        const bays = customerDataService.generateCustomerBays(selectedCustomer, facility.id);
-        facilityBays[facility.id] = bays;
-      }
-    });
-
-    return facilityBays;
+  const logout = () => {
+    navigation.replace('Login');
   };
-
-  // Group and filter bays logic
-  const filteredBays = useMemo(() => {
-    const facilityBays = generateFacilityBays();
-    let baysToShow = [];
-
-    if (selectedFacility === 'all') {
-      // Show bays from all facilities
-      Object.entries(facilityBays).forEach(([facilityId, bays]) => {
-        const facilityInfo = facilities.find(f => f.id === facilityId);
-        bays.forEach(bay => {
-          baysToShow.push({
-            ...bay,
-            facilityId: facilityId,
-            facilityName: facilityInfo?.name || bay.facilityName || 'Unknown Facility',
-            zoneName: bay.name,
-            materialType: bay.materialType || bay.material,
-            volume: bay.volume.toString(),
-            pricePerTon: bay.pricePerTon || 0,
-            datetime: bay.datetime || new Date().toISOString(),
-            name: bay.name,
-            storageId: bay.storageId,
-            uniqueId: bay.uniqueId
-          });
-        });
-      });
-    } else {
-      // Show bays from selected facility only
-      const selectedBays = facilityBays[selectedFacility] || [];
-      
-      selectedBays.forEach(bay => {
-        baysToShow.push({
-          ...bay,
-          zoneName: bay.name,
-          materialType: bay.materialType || bay.material,
-          volume: bay.volume.toString(),
-          pricePerTon: bay.pricePerTon || 0,
-          datetime: bay.datetime || new Date().toISOString(),
-          name: bay.name,
-          storageId: bay.storageId,
-          uniqueId: bay.uniqueId
-        });
-      });
-    }
-
-    let uniqueRecords = baysToShow;
-
-    // Search filter
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      uniqueRecords = uniqueRecords.filter(record => 
-        record.zoneName.toLowerCase().includes(query) ||
-        record.materialType.toLowerCase().includes(query) ||
-        (record.name && record.name.toLowerCase().includes(query)) ||
-        (storages[record.storageId]?.name?.toLowerCase().includes(query))
-      );
-    }
-
-    // Availability filter
-    if (availabilityFilter !== 'all') {
-      uniqueRecords = uniqueRecords.filter(record => {
-        const volume = parseFloat(record.volume || 0);
-        const maxVolume = parseFloat(record.maxVolume || 1000);
-        const utilization = (volume / maxVolume) * 100;
-
-        switch (availabilityFilter) {
-          case 'available':
-            return utilization >= 30 && utilization < 70;
-          case 'high':
-            return utilization >= 70 && utilization < 90;
-          case 'nearly_full':
-            return utilization >= 90;
-          case 'low':
-            return utilization < 30;
-          default:
-            return true;
-        }
-      });
-    }
-
-
-    // Sort by zone name first, then by material type for consistent display
-    return uniqueRecords.sort((a, b) => {
-      const zoneCompare = a.zoneName.localeCompare(b.zoneName);
-      if (zoneCompare !== 0) return zoneCompare;
-      return a.materialType.localeCompare(b.materialType);
-    });
-  }, [selectedFacility, searchQuery, availabilityFilter, facilities]);
-
-  // Calculate statistics based on filtered bays
-  const stats = useMemo(() => {
-    let totalVolume = 0;
-    let availableBays = 0;
-    let highLevelBays = 0;
-    let nearlyFullBays = 0;
-    let lowStockBays = 0;
-    let criticalBays = 0;
-
-    filteredBays.forEach(record => {
-      const volume = parseFloat(record.volume || 0);
-      const maxVolume = parseFloat(record.maxVolume || 1000);
-      const utilization = (volume / maxVolume) * 100;
-      const criticalLevel = record.criticalLevel || 10;
-      
-      totalVolume += volume;
-      
-      if (utilization <= criticalLevel) {
-        criticalBays++;
-      } else if (utilization >= 90) {
-        nearlyFullBays++;
-      } else if (utilization >= 70) {
-        highLevelBays++;
-      } else if (utilization >= 30) {
-        availableBays++;
-      } else {
-        lowStockBays++;
-      }
-    });
-
-    return {
-      totalBays: filteredBays.length,
-      totalVolume,
-      availableBays,
-      highLevelBays,
-      nearlyFullBays,
-      lowStockBays,
-      criticalBays
-    };
-  }, [filteredBays]);
-
-  const formatVolume = (volume, unitType = 'tons') => {
-    let formattedNumber;
-    if (volume >= 1000000) {
-      formattedNumber = `${(volume / 1000000).toFixed(1)}M`;
-    } else if (volume >= 1000) {
-      formattedNumber = `${(volume / 1000).toFixed(1)}K`;
-    } else {
-      formattedNumber = volume.toFixed(0);
-    }
-    return `${formattedNumber} ${unitType}`;
-  };
-
-  const renderBayCard = ({ item }) => (
-    <EnhancedBayCard
-      record={item}
-      storage={{ maxVolume: item.maxVolume }} // Pass the max volume directly
-      onPress={() => {
-        navigation.navigate('BayDetail', {
-          bayName: item.name,
-          currentRecord: item
-        });
-      }}
-    />
-  );
-
-  if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#3498DB" />
-        <Text style={styles.loadingText}>Loading dashboard...</Text>
-      </View>
-    );
-  }
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#2C3E50" />
-      
-      {/* Enhanced Header */}
+    <SafeAreaView style={styles.container}>
+      {/* Clean Header */}
       <View style={styles.header}>
-        <View style={styles.headerTop}>
-          <View style={styles.headerLeft}>
-            <View style={styles.brandingRow}>
-              <View style={styles.logoRow}>
-                <TouchableOpacity 
-                  style={styles.customerSelector}
-                  onPress={() => setShowCustomerModal(true)}
-                >
-                  <Text style={styles.brandText}>
-                    QUVO × {customers.find(c => c.id === selectedCustomer)?.name || 'Select Customer'}
-                  </Text>
-                  <Text style={styles.customerArrow}>▼</Text>
-                </TouchableOpacity>
-                <View style={styles.partnerLogoContainer}>
-                  <Image 
-                    source={require('../../assets/images/marietta.png')} 
-                    style={styles.partnerLogo}
-                    resizeMode="contain"
-                  />
-                </View>
-              </View>
-            </View>
-            <Text style={styles.welcomeText}>Hello, {user?.name?.split('.')[0] || 'User'}</Text>
-            <Text style={styles.territoryText}>Territory: Florida West Coast</Text>
-            <TouchableOpacity 
-              style={styles.facilitySelector}
-              onPress={() => setShowFacilityModal(true)}
-            >
-              <Text style={styles.projectText}>
-                {facilities.find(f => f.id === selectedFacility)?.name || 'All Facilities'}
-              </Text>
-              <Text style={styles.projectArrow}>▼</Text>
-            </TouchableOpacity>
-            {selectedFacility !== 'all' && (
-              <View style={styles.facilityInfoRow}>
-                <Text style={styles.facilityDetails}>
-                  {facilities.find(f => f.id === selectedFacility)?.facility?.city}, {facilities.find(f => f.id === selectedFacility)?.facility?.state}
-                </Text>
-                <TouchableOpacity 
-                  style={styles.facilityInfoButton}
-                  onPress={() => {
-                    const selectedFacilityData = facilities.find(f => f.id === selectedFacility);
-                    if (selectedFacilityData?.facility) {
-                      navigation.navigate('FacilityDetail', {
-                        facilityId: selectedFacilityData.facility.facilityId
-                      });
-                    }
-                  }}
-                >
-                  <Text style={styles.facilityInfoButtonText}>ℹ️ Details</Text>
-                </TouchableOpacity>
-              </View>
-            )}
+        <View style={styles.mainHeaderRow}>
+          <View style={styles.brandSection}>
+            <Image 
+              source={require('../../assets/images/quvo_logo.png')}
+              style={styles.quvoLogo}
+              resizeMode="contain"
+            />
           </View>
-          <TouchableOpacity onPress={logout} style={styles.logoutButton}>
-            <View style={styles.logoutIcon} />
-          </TouchableOpacity>
+          
+          <View style={styles.headerActions}>
+            <TouchableOpacity onPress={logout} style={styles.logoutBtn}>
+              <Icon name="sign-out" size={16} color="#6B7280" />
+            </TouchableOpacity>
+          </View>
         </View>
-
-        {/* Enhanced Stats Summary */}
-        <View style={styles.simpleStats}>
-          <Text style={styles.simpleStatsText}>
-            {filteredBays.length} of {stats.totalBays} bays
-          </Text>
-          {stats.criticalBays > 0 && (
-            <View style={styles.criticalAlert}>
-              <Text style={styles.criticalAlertText}>
-                ⚠️ {stats.criticalBays} critical (≤10%)
-              </Text>
-            </View>
-          )}
-          {!canViewAllSites() && (
-            <Text style={styles.restrictedAccessText}>
-              📍 Limited to assigned sites
-            </Text>
+        
+        <View style={styles.companyLogoRow}>
+          {companyData.company === 'cemex' ? (
+            <Image 
+              source={cemexLogo} 
+              style={styles.companyLogo}
+              resizeMode="contain"
+            />
+          ) : (
+            <Image 
+              source={mariettaLogo} 
+              style={styles.companyLogo}
+              resizeMode="contain"
+            />
           )}
         </View>
       </View>
 
-      {/* Minimal Filter Controls */}
-      <MinimalFilterControls
-        selectedDate={selectedDate}
-        onDateChange={setSelectedDate}
-        availabilityFilter={availabilityFilter}
-        onAvailabilityFilter={setAvailabilityFilter}
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
-      />
+      {/* Search with Filter Modal */}
+      <View style={styles.filtersContainer}>
+        <TouchableOpacity 
+          style={styles.searchContainer}
+          onPress={() => setShowFilterModal(true)}
+        >
+          <Icon name="search" size={16} color="#666" style={styles.searchIcon} />
+          <Text style={styles.searchPlaceholder}>
+            {(selectedState || selectedMaterial || searchQuery) 
+              ? `${[selectedState, selectedMaterial, searchQuery].filter(Boolean).join(', ')}`
+              : 'Search and filter facilities...'
+            }
+          </Text>
+          <Icon name="filter" size={16} color="#5bbc9d" />
+        </TouchableOpacity>
+      </View>
 
+      {/* Filter Modal */}
+      <Modal
+        visible={showFilterModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowFilterModal(false)}
+      >
+        <SafeAreaView style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <TouchableOpacity onPress={() => setShowFilterModal(false)}>
+              <Icon name="times" size={20} color="#666" />
+            </TouchableOpacity>
+            <Text style={styles.modalTitle}>Search & Filter</Text>
+            <TouchableOpacity 
+              onPress={() => {
+                setSearchQuery('');
+                setSelectedState('');
+                setSelectedMaterial('');
+              }}
+            >
+              <Text style={styles.clearAllText}>Clear All</Text>
+            </TouchableOpacity>
+          </View>
 
-      {/* Enhanced Bay Grid */}
-      {filteredBays.length > 0 ? (
+          <ScrollView style={styles.modalContent}>
+            {/* Text Search */}
+            <View style={styles.modalSection}>
+              <Text style={styles.sectionTitle}>Search</Text>
+              <View style={styles.modalSearchContainer}>
+                <Icon name="search" size={16} color="#666" style={styles.searchIcon} />
+                <TextInput
+                  style={styles.modalSearchInput}
+                  placeholder="Search by name, location, address..."
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                  placeholderTextColor="#999"
+                />
+              </View>
+            </View>
+
+            {/* State Filter */}
+            <View style={styles.modalSection}>
+              <Text style={styles.sectionTitle}>Filter by State</Text>
+              <View style={styles.chipContainer}>
+                <TouchableOpacity 
+                  style={[styles.modalFilterChip, !selectedState && styles.modalFilterChipActive]}
+                  onPress={() => setSelectedState('')}
+                >
+                  <Text style={[styles.modalFilterChipText, !selectedState && styles.modalFilterChipTextActive]}>
+                    All States
+                  </Text>
+                </TouchableOpacity>
+                
+                {states.map(state => (
+                  <TouchableOpacity 
+                    key={state}
+                    style={[styles.modalFilterChip, selectedState === state && styles.modalFilterChipActive]}
+                    onPress={() => setSelectedState(selectedState === state ? '' : state)}
+                  >
+                    <Text style={[styles.modalFilterChipText, selectedState === state && styles.modalFilterChipTextActive]}>
+                      {state}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            {/* Material Filter */}
+            <View style={styles.modalSection}>
+              <Text style={styles.sectionTitle}>Filter by Material</Text>
+              <View style={styles.chipContainer}>
+                <TouchableOpacity 
+                  style={[styles.modalFilterChip, !selectedMaterial && styles.modalFilterChipActive]}
+                  onPress={() => setSelectedMaterial('')}
+                >
+                  <Text style={[styles.modalFilterChipText, !selectedMaterial && styles.modalFilterChipTextActive]}>
+                    All Materials
+                  </Text>
+                </TouchableOpacity>
+                
+                {materials.map(material => (
+                  <TouchableOpacity 
+                    key={material}
+                    style={[styles.modalFilterChip, selectedMaterial === material && styles.modalFilterChipActive]}
+                    onPress={() => setSelectedMaterial(selectedMaterial === material ? '' : material)}
+                  >
+                    <Text style={[styles.modalFilterChipText, selectedMaterial === material && styles.modalFilterChipTextActive]}>
+                      {material}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            {/* Results Preview */}
+            <View style={styles.resultsPreview}>
+              <Text style={styles.resultsText}>
+                {filteredProjects.length} facilities match your filters
+              </Text>
+            </View>
+          </ScrollView>
+
+          <View style={styles.modalFooter}>
+            <TouchableOpacity 
+              style={styles.applyButton}
+              onPress={() => setShowFilterModal(false)}
+            >
+              <Text style={styles.applyButtonText}>Apply Filters</Text>
+            </TouchableOpacity>
+          </View>
+        </SafeAreaView>
+      </Modal>
+
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#5bbc9d" />
+          <Text style={styles.loadingText}>Loading dashboard data...</Text>
+        </View>
+      ) : filteredProjects.length > 0 ? (
         <FlatGrid
-          itemDimension={150}
-          data={filteredBays}
-          style={styles.gridList}
+          itemDimension={320}
+          data={filteredProjects}
+          style={styles.gridView}
           spacing={12}
-          renderItem={renderBayCard}
-          refreshControl={
-            <RefreshControl 
-              refreshing={refreshing} 
-              onRefresh={handleRefresh}
-              tintColor="#3498DB"
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+          renderItem={({ item, index }) => (
+            <EnhancedBayCard
+              key={`${item.id}-${index}`}
+              record={item}
+              storage={{ maxVolume: item.maxVolume }}
+              onPress={() => navigation.navigate('BayDetail', { 
+                bayName: item.zoneName || item.name,
+                currentRecord: item
+              })}
             />
-          }
-          contentContainerStyle={styles.gridContent}
-          staticDimension={width - 32}
-          maxItemsPerRow={2}
-          itemContainerStyle={styles.gridItemContainer}
+          )}
         />
       ) : (
-        <View style={styles.emptyState}>
-          <View style={styles.emptyStateIcon} />
-          <Text style={styles.emptyStateTitle}>No Bays Found</Text>
-          <Text style={styles.emptyStateMessage}>
-            Try adjusting your filters or search terms
-          </Text>
-          <TouchableOpacity 
-            onPress={() => {
-              setAvailabilityFilter('all');
-              setSearchQuery('');
-            }}
-            style={styles.resetButton}
-          >
-            <Text style={styles.resetButtonText}>Show All Bays</Text>
-          </TouchableOpacity>
-        </View>
+        <ScrollView 
+          style={styles.scrollView}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        >
+          <View style={styles.noDataContainer}>
+            <Text style={styles.noDataText}>No bay data available</Text>
+            <TouchableOpacity onPress={onRefresh} style={styles.retryButton}>
+              <Text style={styles.retryText}>Retry</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
       )}
-
-      {/* Facility Selection Modal */}
-      <Modal
-        visible={showFacilityModal}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setShowFacilityModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.largeModalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Select Facility</Text>
-              <Text style={styles.facilityCount}>
-                {facilities.length - 1} facilities across {Object.keys(facilityGroups).length} states
-              </Text>
-              
-              {/* Search Input */}
-              <TextInput
-                style={styles.searchInput}
-                placeholder="Search facilities, cities, or materials..."
-                value={facilitySearchQuery}
-                onChangeText={setFacilitySearchQuery}
-                placeholderTextColor="#95A5A6"
-              />
-
-              {/* Filters */}
-              <View style={styles.filtersRow}>
-                {/* State Filter */}
-                <TouchableOpacity 
-                  style={[styles.filterChip, selectedState !== 'all' && styles.activeFilterChip]}
-                  onPress={() => setShowStateModal(true)}
-                >
-                  <Text style={[styles.filterChipText, selectedState !== 'all' && styles.activeFilterChipText]}>
-                    {selectedState === 'all' ? '📍 All States' : `📍 ${selectedState}`}
-                  </Text>
-                </TouchableOpacity>
-
-                {/* Product Filter */}
-                <TouchableOpacity 
-                  style={[styles.filterChip, selectedProductCategory !== 'all' && styles.activeFilterChip]}
-                  onPress={() => {
-                    const categories = martinMariettaDataService.getProductCategories();
-                    Alert.alert(
-                      'Filter by Product',
-                      'Choose a product category',
-                      [
-                        { text: 'All Products', onPress: () => setSelectedProductCategory('all') },
-                        ...categories.map(cat => ({
-                          text: cat,
-                          onPress: () => setSelectedProductCategory(cat)
-                        })),
-                        { text: 'Cancel', style: 'cancel' }
-                      ]
-                    );
-                  }}
-                >
-                  <Text style={[styles.filterChipText, selectedProductCategory !== 'all' && styles.activeFilterChipText]}>
-                    {selectedProductCategory === 'all' ? '🏗️ All Products' : `🏗️ ${selectedProductCategory}`}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-
-              {/* Clear Filters */}
-              {(facilitySearchQuery || selectedState !== 'all' || selectedProductCategory !== 'all') && (
-                <TouchableOpacity 
-                  style={styles.clearFiltersButton}
-                  onPress={() => {
-                    setFacilitySearchQuery('');
-                    setSelectedState('all');
-                    setSelectedProductCategory('all');
-                  }}
-                >
-                  <Text style={styles.clearFiltersText}>Clear Filters</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-            
-            <ScrollView style={styles.facilityScrollView}>
-              {/* All Facilities Option */}
-              <TouchableOpacity
-                style={[
-                  styles.facilityOption,
-                  selectedFacility === 'all' && styles.selectedFacilityOption
-                ]}
-                onPress={() => {
-                  setSelectedFacility('all');
-                  setShowFacilityModal(false);
-                }}
-              >
-                <Text style={[
-                  styles.facilityOptionText,
-                  selectedFacility === 'all' && styles.selectedFacilityOptionText
-                ]}>
-                  🏢 All Facilities
-                </Text>
-                {selectedFacility === 'all' && (
-                  <Text style={styles.checkmark}>✓</Text>
-                )}
-              </TouchableOpacity>
-              
-              {/* Filtered Facilities */}
-              {(() => {
-                const filteredFacilities = getFilteredFacilities();
-                if (filteredFacilities.length === 0) {
-                  return (
-                    <View style={styles.noResultsContainer}>
-                      <Text style={styles.noResultsText}>No facilities match your search criteria</Text>
-                      <Text style={styles.noResultsSubText}>Try adjusting your filters or search terms</Text>
-                    </View>
-                  );
-                }
-
-                // Group by state for display
-                const groupedFacilities = {};
-                filteredFacilities.forEach(facility => {
-                  if (!groupedFacilities[facility.state]) {
-                    groupedFacilities[facility.state] = [];
-                  }
-                  groupedFacilities[facility.state].push(facility);
-                });
-
-                return Object.entries(groupedFacilities)
-                  .sort(([, a], [, b]) => b.length - a.length) // Sort states by facility count
-                  .map(([state, facilities]) => (
-                    <View key={state} style={styles.stateGroup}>
-                      <Text style={styles.stateHeader}>{state} ({facilities.length} facilities)</Text>
-                      {facilities.slice(0, 10).map(facility => (
-                        <TouchableOpacity
-                          key={facility.facilityId || facility.id}
-                          style={[
-                            styles.facilitySubOption,
-                            selectedFacility === (selectedCustomer === 'martin-marietta' ? facility.facilityId?.toString() : facility.id) && styles.selectedFacilityOption
-                          ]}
-                          onPress={() => {
-                            const facilityKey = selectedCustomer === 'martin-marietta' 
-                              ? facility.facilityId.toString() 
-                              : facility.id;
-                            setSelectedFacility(facilityKey);
-                            setShowFacilityModal(false);
-                            // Clear filters when facility is selected
-                            setFacilitySearchQuery('');
-                            setSelectedState('all');
-                            setSelectedProductCategory('all');
-                          }}
-                        >
-                          <View style={styles.facilityInfo}>
-                            <Text style={[
-                              styles.facilityOptionText,
-                              selectedFacility === (selectedCustomer === 'martin-marietta' ? facility.facilityId?.toString() : facility.id) && styles.selectedFacilityOptionText
-                            ]}>
-                              {facility.name}
-                            </Text>
-                            <Text style={[
-                              styles.facilitySubText,
-                              selectedFacility === (selectedCustomer === 'martin-marietta' ? facility.facilityId?.toString() : facility.id) && styles.selectedFacilitySubText
-                            ]}>
-                              {facility.city} • {facility.products?.join(', ') || Object.keys(facility.products || {}).length + ' products'}
-                            </Text>
-                          </View>
-                          {selectedFacility === (selectedCustomer === 'martin-marietta' ? facility.facilityId?.toString() : facility.id) && (
-                            <Text style={styles.checkmark}>✓</Text>
-                          )}
-                        </TouchableOpacity>
-                      ))}
-                      {facilities.length > 10 && (
-                        <Text style={styles.moreText}>... and {facilities.length - 10} more facilities in {state}</Text>
-                      )}
-                    </View>
-                  ));
-              })()}
-            </ScrollView>
-            
-            <TouchableOpacity
-              style={styles.modalCancelButton}
-              onPress={() => setShowFacilityModal(false)}
-            >
-              <Text style={styles.modalCancelText}>Cancel</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-
-      {/* State Selection Modal */}
-      <Modal
-        visible={showStateModal}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setShowStateModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Filter by State</Text>
-            
-            <ScrollView style={styles.stateModalScrollView}>
-              {/* All States Option */}
-              <TouchableOpacity
-                style={[
-                  styles.facilityOption,
-                  selectedState === 'all' && styles.selectedFacilityOption
-                ]}
-                onPress={() => {
-                  setSelectedState('all');
-                  setShowStateModal(false);
-                }}
-              >
-                <Text style={[
-                  styles.facilityOptionText,
-                  selectedState === 'all' && styles.selectedFacilityOptionText
-                ]}>
-                  📍 All States
-                </Text>
-                {selectedState === 'all' && (
-                  <Text style={styles.checkmark}>✓</Text>
-                )}
-              </TouchableOpacity>
-
-              {/* State List */}
-              {martinMariettaDataService.getAllStates().map(state => (
-                <TouchableOpacity
-                  key={state}
-                  style={[
-                    styles.facilityOption,
-                    selectedState === state && styles.selectedFacilityOption
-                  ]}
-                  onPress={() => {
-                    setSelectedState(state);
-                    setShowStateModal(false);
-                  }}
-                >
-                  <Text style={[
-                    styles.facilityOptionText,
-                    selectedState === state && styles.selectedFacilityOptionText
-                  ]}>
-                    {state} ({martinMariettaDataService.getFacilitiesByState(state).length} facilities)
-                  </Text>
-                  {selectedState === state && (
-                    <Text style={styles.checkmark}>✓</Text>
-                  )}
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-            
-            <TouchableOpacity
-              style={styles.modalCancelButton}
-              onPress={() => setShowStateModal(false)}
-            >
-              <Text style={styles.modalCancelText}>Cancel</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Customer Selection Modal */}
-      <Modal
-        visible={showCustomerModal}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setShowCustomerModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Select Customer</Text>
-            
-            {customers.map((customer) => (
-              <TouchableOpacity
-                key={customer.id}
-                style={[
-                  styles.customerOption,
-                  selectedCustomer === customer.id && styles.selectedCustomerOption
-                ]}
-                onPress={() => {
-                  setSelectedCustomer(customer.id);
-                  setShowCustomerModal(false);
-                  // Reset facility selection when customer changes
-                  setSelectedFacility('all');
-                  setFacilitySearchQuery('');
-                  setSelectedState('all');
-                  setSelectedProductCategory('all');
-                }}
-              >
-                <View style={styles.customerInfo}>
-                  <Text style={[
-                    styles.customerName,
-                    selectedCustomer === customer.id && styles.selectedCustomerName
-                  ]}>
-                    {customer.name}
-                  </Text>
-                  <Text style={[
-                    styles.customerSiteCount,
-                    selectedCustomer === customer.id && styles.selectedCustomerSiteCount
-                  ]}>
-                    {Object.keys(customer.sites).length} sites
-                  </Text>
-                </View>
-                <View 
-                  style={[
-                    styles.customerColorIndicator,
-                    { backgroundColor: customer.color }
-                  ]}
-                />
-                {selectedCustomer === customer.id && (
-                  <Text style={styles.checkmark}>✓</Text>
-                )}
-              </TouchableOpacity>
-            ))}
-            
-            <TouchableOpacity
-              style={styles.modalCancelButton}
-              onPress={() => setShowCustomerModal(false)}
-            >
-              <Text style={styles.modalCancelText}>Cancel</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-
-
-    </View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F7FA',
+    backgroundColor: '#ffffff',
+  },
+  header: {
+    backgroundColor: '#ffffff',
+    paddingTop: 8,
+    paddingBottom: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  mainHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  brandSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingLeft: 8,
+  },
+  quvoLogo: {
+    width: 108,
+    height: 32.4,
+  },
+  companyLogoRow: {
+    width: '100%',
+    alignItems: 'center',
+    marginTop: 16,
+  },
+  companyLogo: {
+    width: '100%',
+    height: 60,
+    maxWidth: 400,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  logoutBtn: {
+    padding: 8,
+    borderRadius: 6,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F5F7FA',
+    padding: 20,
   },
   loadingText: {
     marginTop: 16,
     fontSize: 16,
-    color: '#7F8C8D',
-    fontWeight: '500',
+    color: '#6B7280',
   },
-  header: {
-    backgroundColor: '#2C3E50',
-    paddingTop: 50,
-    paddingBottom: 20,
-    borderBottomLeftRadius: 25,
-    borderBottomRightRadius: 25,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 10,
-  },
-  headerTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    paddingHorizontal: 20,
-    marginBottom: 20,
-  },
-  headerLeft: {
+  scrollView: {
     flex: 1,
   },
-  brandingRow: {
-    marginBottom: 12,
+  gridView: {
     marginTop: 8,
-  },
-  customerSelector: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  brandText: {
-    color: '#3498DB',
-    fontSize: 12,
-    fontWeight: 'bold',
-    letterSpacing: 0.5,
-    textTransform: 'uppercase',
-  },
-  customerArrow: {
-    color: '#3498DB',
-    fontSize: 10,
-    marginLeft: 6,
-    marginTop: 1,
-  },
-  welcomeText: {
-    color: 'rgba(255,255,255,0.8)',
-    fontSize: 16,
-    fontWeight: '400',
-    marginBottom: 2,
-  },
-  roleRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  territoryText: {
-    color: 'rgba(255,255,255,0.6)',
-    fontSize: 12,
-    fontWeight: '400',
-    flex: 1,
-    marginBottom: 8,
-  },
-  roleSelector: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  roleText: {
-    color: 'rgba(255,255,255,0.9)',
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  roleArrow: {
-    color: 'rgba(255,255,255,0.7)',
-    fontSize: 8,
-    marginLeft: 4,
-  },
-  facilitySelector: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  facilityInfoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: 4,
-  },
-  facilityDetails: {
-    color: 'rgba(255,255,255,0.6)',
-    fontSize: 12,
-    fontWeight: '400',
     flex: 1,
   },
-  facilityInfoButton: {
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-    marginLeft: 8,
-  },
-  facilityInfoButtonText: {
-    color: '#FFFFFF',
-    fontSize: 10,
-    fontWeight: '600',
-  },
-  projectSelector: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  projectText: {
-    color: '#FFFFFF',
-    fontSize: 20,
-    fontWeight: 'bold',
-    letterSpacing: 0.3,
-  },
-  projectArrow: {
-    color: 'rgba(255,255,255,0.7)',
-    fontSize: 12,
-    marginLeft: 8,
-    marginTop: 2,
-  },
-  logoutButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+  noDataContainer: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    padding: 40,
   },
-  logoutIcon: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    backgroundColor: '#FFFFFF',
-  },
-  simpleStats: {
-    paddingHorizontal: 20,
-    paddingTop: 8,
-  },
-  simpleStatsText: {
-    fontSize: 14,
-    color: 'rgba(255,255,255,0.8)',
-    fontWeight: '500',
-    marginBottom: 4,
-  },
-  criticalAlert: {
-    backgroundColor: 'rgba(255, 107, 107, 0.2)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-    alignSelf: 'flex-start',
-    marginBottom: 4,
-  },
-  criticalAlertText: {
-    fontSize: 12,
-    color: '#FF6B6B',
-    fontWeight: 'bold',
-  },
-  restrictedAccessText: {
-    fontSize: 11,
-    color: 'rgba(255,255,255,0.6)',
-    fontStyle: 'italic',
-  },
-  priceManagementButton: {
-    backgroundColor: 'rgba(39, 174, 96, 0.2)',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
-    alignSelf: 'flex-start',
-    marginTop: 6,
-  },
-  priceManagementButtonText: {
-    fontSize: 12,
-    color: '#27AE60',
-    fontWeight: 'bold',
-  },
-  statsScroll: {
-    paddingLeft: 20,
-  },
-  statsContainer: {
-    paddingRight: 20,
-  },
-  statCard: {
-    borderRadius: 16,
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    marginRight: 12,
-    minWidth: 100,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 4,
-  },
-  primaryStatCard: {
-    backgroundColor: '#3498DB',
-  },
-  secondaryStatCard: {
-    backgroundColor: '#4CAF50',
-  },
-  warningStatCard: {
-    backgroundColor: '#FFB74D',
-  },
-  dangerStatCard: {
-    backgroundColor: '#FF6B6B',
-  },
-  infoStatCard: {
-    backgroundColor: '#9B59B6',
-  },
-  primaryStatValue: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginBottom: 4,
-  },
-  primaryStatLabel: {
-    fontSize: 11,
-    color: 'rgba(255,255,255,0.9)',
-    fontWeight: '600',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  secondaryStatValue: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginBottom: 4,
-  },
-  secondaryStatLabel: {
-    fontSize: 10,
-    color: 'rgba(255,255,255,0.9)',
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-  warningStatValue: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginBottom: 4,
-  },
-  warningStatLabel: {
-    fontSize: 10,
-    color: 'rgba(255,255,255,0.9)',
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-  dangerStatValue: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginBottom: 4,
-  },
-  dangerStatLabel: {
-    fontSize: 10,
-    color: 'rgba(255,255,255,0.9)',
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-  infoStatValue: {
+  noDataText: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginBottom: 4,
-  },
-  infoStatLabel: {
-    fontSize: 10,
-    color: 'rgba(255,255,255,0.9)',
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-  resultsHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  resultsText: {
-    fontSize: 14,
-    color: '#5D6D7E',
-    fontWeight: '500',
-  },
-  clearFiltersButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
-    backgroundColor: '#E8EAED',
-  },
-  clearFiltersText: {
-    fontSize: 12,
-    color: '#5D6D7E',
-    fontWeight: '600',
-  },
-  gridList: {
-    flex: 1,
-    paddingHorizontal: 16,
-  },
-  gridContent: {
-    paddingBottom: 20,
-  },
-  emptyState: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 40,
-  },
-  emptyStateIcon: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: '#E8EAED',
-    marginBottom: 16,
-    opacity: 0.5,
-  },
-  emptyStateTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#2C3E50',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  emptyStateMessage: {
-    fontSize: 16,
-    color: '#7F8C8D',
-    textAlign: 'center',
-    lineHeight: 24,
-    marginBottom: 24,
-  },
-  resetButton: {
-    backgroundColor: '#3498DB',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 25,
-  },
-  resetButtonText: {
-    color: '#FFFFFF',
-    fontWeight: '600',
-    fontSize: 16,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalContent: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 20,
-    width: width * 0.8,
-    maxWidth: 300,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.25,
-    shadowRadius: 20,
-    elevation: 10,
-  },
-  largeModalContent: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 20,
-    width: width * 0.9,
-    height: height * 0.8,
-    maxWidth: 400,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.25,
-    shadowRadius: 20,
-    elevation: 10,
-  },
-  modalHeader: {
+    color: '#6B7280',
     marginBottom: 20,
+    textAlign: 'center',
+  },
+  retryButton: {
+    backgroundColor: '#5bbc9d',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  retryText: {
+    color: '#ffffff',
+    fontWeight: '600',
+  },
+  filtersContainer: {
+    backgroundColor: '#ffffff',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#E8EAED',
-    paddingBottom: 15,
+    borderBottomColor: '#E5E7EB',
   },
-  facilityCount: {
-    fontSize: 14,
-    color: '#7F8C8D',
-    fontWeight: '500',
-    marginTop: 5,
-  },
-  facilityScrollView: {
-    flex: 1,
-    marginBottom: 20,
-  },
-  stateGroup: {
-    marginBottom: 20,
-  },
-  stateHeader: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#2C3E50',
-    marginBottom: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    backgroundColor: '#F8F9FA',
-    borderRadius: 8,
-  },
-  facilitySubOption: {
+  searchContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+    backgroundColor: '#F9FAFB',
     borderRadius: 8,
-    marginBottom: 4,
-    marginLeft: 12,
-    backgroundColor: 'rgba(52, 152, 219, 0.05)',
+    paddingHorizontal: 12,
+    marginBottom: 12,
+    height: 44,
   },
-  facilityInfo: {
-    flex: 1,
-  },
-  facilitySubText: {
-    fontSize: 12,
-    color: '#7F8C8D',
-    marginTop: 2,
-  },
-  selectedFacilitySubText: {
-    color: 'rgba(255,255,255,0.8)',
-  },
-  moreText: {
-    fontSize: 12,
-    color: '#7F8C8D',
-    fontStyle: 'italic',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+  searchIcon: {
+    marginRight: 8,
   },
   searchInput: {
-    backgroundColor: '#F8F9FA',
-    borderRadius: 12,
-    paddingHorizontal: 15,
-    paddingVertical: 12,
-    fontSize: 14,
-    color: '#2C3E50',
-    marginTop: 15,
-    borderWidth: 1,
-    borderColor: '#E8EAED',
+    flex: 1,
+    height: 40,
+    fontSize: 16,
+    color: '#1F2937',
   },
-  filtersRow: {
+  stateFilters: {
     flexDirection: 'row',
-    gap: 8,
-    marginTop: 12,
   },
   filterChip: {
-    backgroundColor: '#F8F9FA',
-    borderRadius: 20,
+    backgroundColor: '#F3F4F6',
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderWidth: 1,
-    borderColor: '#E8EAED',
-    flex: 1,
+    borderRadius: 16,
+    marginRight: 8,
   },
-  activeFilterChip: {
-    backgroundColor: '#3498DB',
-    borderColor: '#3498DB',
+  filterChipActive: {
+    backgroundColor: '#5bbc9d',
   },
   filterChipText: {
-    fontSize: 12,
-    color: '#7F8C8D',
-    textAlign: 'center',
-    fontWeight: '500',
-  },
-  activeFilterChipText: {
-    color: '#FFFFFF',
-    fontWeight: 'bold',
-  },
-  clearFiltersButton: {
-    alignSelf: 'center',
-    marginTop: 10,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    backgroundColor: 'rgba(255, 107, 107, 0.1)',
-    borderRadius: 8,
-  },
-  clearFiltersText: {
-    fontSize: 12,
-    color: '#FF6B6B',
-    fontWeight: '600',
-  },
-  noResultsContainer: {
-    padding: 30,
-    alignItems: 'center',
-  },
-  noResultsText: {
-    fontSize: 16,
-    color: '#7F8C8D',
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-  noResultsSubText: {
-    fontSize: 12,
-    color: '#95A5A6',
-    textAlign: 'center',
-    marginTop: 5,
-  },
-  stateModalScrollView: {
-    maxHeight: 300,
-    marginBottom: 20,
-  },
-  customerOption: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 15,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    marginBottom: 8,
-    backgroundColor: '#F8F9FA',
-  },
-  selectedCustomerOption: {
-    backgroundColor: '#3498DB',
-  },
-  customerInfo: {
-    flex: 1,
-  },
-  customerName: {
-    fontSize: 16,
-    color: '#2C3E50',
-    fontWeight: '600',
-    marginBottom: 2,
-  },
-  selectedCustomerName: {
-    color: '#FFFFFF',
-    fontWeight: 'bold',
-  },
-  customerSiteCount: {
-    fontSize: 12,
-    color: '#7F8C8D',
-  },
-  selectedCustomerSiteCount: {
-    color: 'rgba(255,255,255,0.8)',
-  },
-  customerColorIndicator: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    marginRight: 12,
-  },
-  roleModalSubtitle: {
     fontSize: 14,
-    color: '#7F8C8D',
-    textAlign: 'center',
-    marginBottom: 20,
-    marginTop: 5,
+    fontWeight: '500',
+    color: '#6B7280',
   },
-  roleOption: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    paddingVertical: 15,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    marginBottom: 12,
-    backgroundColor: '#F8F9FA',
-    borderWidth: 2,
-    borderColor: 'transparent',
+  filterChipTextActive: {
+    color: '#ffffff',
   },
-  selectedRoleOption: {
-    backgroundColor: '#3498DB',
-    borderColor: '#2980B9',
-  },
-  roleOptionContent: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
+  searchPlaceholder: {
     flex: 1,
-  },
-  roleEmoji: {
-    fontSize: 20,
-    marginRight: 12,
-    marginTop: 2,
-  },
-  roleInfo: {
-    flex: 1,
-  },
-  roleOptionTitle: {
     fontSize: 16,
-    color: '#2C3E50',
-    fontWeight: 'bold',
-    marginBottom: 6,
+    color: '#999',
+    marginHorizontal: 12,
   },
-  selectedRoleOptionTitle: {
-    color: '#FFFFFF',
+  modalContainer: {
+    flex: 1,
+    backgroundColor: '#ffffff',
   },
-  roleOptionDescription: {
-    fontSize: 12,
-    color: '#7F8C8D',
-    lineHeight: 16,
-  },
-  selectedRoleOptionDescription: {
-    color: 'rgba(255,255,255,0.9)',
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
   },
   modalTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#2C3E50',
-    textAlign: 'center',
-    marginBottom: 20,
+    fontWeight: '600',
+    color: '#1F2937',
   },
-  facilityOption: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 15,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    marginBottom: 8,
-  },
-  selectedFacilityOption: {
-    backgroundColor: '#3498DB',
-  },
-  facilityOptionText: {
+  clearAllText: {
     fontSize: 16,
-    color: '#2C3E50',
-    fontWeight: '500',
-  },
-  selectedFacilityOptionText: {
-    color: '#FFFFFF',
-    fontWeight: 'bold',
-  },
-  checkmark: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  modalCancelButton: {
-    marginTop: 16,
-    paddingVertical: 12,
-    borderRadius: 12,
-    backgroundColor: '#F8F9FA',
-  },
-  modalCancelText: {
-    textAlign: 'center',
-    fontSize: 16,
-    color: '#7F8C8D',
+    color: '#5bbc9d',
     fontWeight: '600',
   },
-  logoRow: {
+  modalContent: {
+    flex: 1,
+    padding: 16,
+  },
+  modalSection: {
+    marginBottom: 24,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: 12,
+  },
+  modalSearchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    backgroundColor: '#F9FAFB',
+    borderRadius: 8,
+    paddingHorizontal: 12,
   },
-  partnerLogoContainer: {
-    marginLeft: 12,
+  modalSearchInput: {
+    flex: 1,
+    height: 44,
+    fontSize: 16,
+    color: '#1F2937',
   },
-  partnerLogo: {
-    width: 60,
-    height: 20,
-    opacity: 1.0,
-    tintColor: '#FFFFFF',
+  chipContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
   },
-  gridItemContainer: {
-    justifyContent: 'center',
+  modalFilterChip: {
+    backgroundColor: '#F3F4F6',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginBottom: 8,
+  },
+  modalFilterChipActive: {
+    backgroundColor: '#5bbc9d',
+  },
+  modalFilterChipText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#6B7280',
+  },
+  modalFilterChipTextActive: {
+    color: '#ffffff',
+  },
+  resultsPreview: {
+    backgroundColor: '#F9FAFB',
+    padding: 16,
+    borderRadius: 8,
     alignItems: 'center',
+  },
+  resultsText: {
+    fontSize: 14,
+    color: '#6B7280',
+    fontWeight: '500',
+  },
+  modalFooter: {
+    padding: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+  },
+  applyButton: {
+    backgroundColor: '#5bbc9d',
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  applyButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#ffffff',
   },
 });
 

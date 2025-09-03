@@ -10,6 +10,7 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { useAuth } from '../context/AuthContext';
+import Icon from 'react-native-vector-icons/FontAwesome';
 import BayCard from '../components/BayCard';
 import ProjectSwitcher from '../components/ProjectSwitcher';
 import api from '../services/api';
@@ -132,7 +133,7 @@ const DashboardScreen = () => {
             <Text style={styles.projectText}>
               {selectedProject?.name.toUpperCase()} Facility
             </Text>
-            <Text style={styles.projectArrow}>▼</Text>
+            <Icon name="chevron-down" size={12} color="#2C3E50" />
           </TouchableOpacity>
         </View>
         <TouchableOpacity onPress={logout} style={styles.logoutButton}>

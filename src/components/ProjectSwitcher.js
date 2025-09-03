@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import Icon from 'react-native-vector-icons/FontAwesome';
 
 const ProjectSwitcher = ({ projects, selectedProject, onSelectProject, visible, onClose }) => {
   if (!visible) return null;
@@ -52,7 +53,7 @@ const ProjectSwitcher = ({ projects, selectedProject, onSelectProject, visible, 
               
               {selectedProject?._id === project._id && (
                 <View style={styles.selectedIndicator}>
-                  <Text style={styles.checkmark}>✓</Text>
+                  <Icon name="check" size={16} color="#4CAF50" />
                 </View>
               )}
             </TouchableOpacity>

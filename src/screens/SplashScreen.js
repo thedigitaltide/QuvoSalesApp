@@ -4,9 +4,9 @@ import {
   Text,
   StyleSheet,
   Animated,
-  SafeAreaView,
   Image,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 
 
@@ -35,7 +35,7 @@ const SplashScreen = ({ onComplete }) => {
       if (onComplete) {
         onComplete();
       }
-    }, 2500);
+    }, 1500);
 
     return () => clearTimeout(timer);
   }, [onComplete, fadeAnim, scaleAnim]);
@@ -43,7 +43,7 @@ const SplashScreen = ({ onComplete }) => {
   return (
     <SafeAreaView style={styles.container}>
       <LinearGradient
-        colors={['#5A6C7D', '#6B7D8F', '#5A6C7D']}
+        colors={['#ffffff', '#ffffff', '#ffffff']}
         style={styles.gradient}
       >
         <View style={styles.content}>
@@ -56,19 +56,12 @@ const SplashScreen = ({ onComplete }) => {
               },
             ]}
           >
-            <View style={styles.logoStack}>
-              <Image 
-                source={require('../../assets/images/quvo_logo.png')} 
-                style={styles.quvoLogo}
-                resizeMode="contain"
-              />
-              <Image 
-                source={require('../../assets/images/marietta.png')} 
-                style={styles.mariettaLogo}
-                resizeMode="contain"
-              />
-            </View>
-            <Text style={styles.tagline}>Sales Management Platform</Text>
+            <Image 
+              source={require('../../assets/images/quvo_logo.png')} 
+              style={styles.quvoLogo}
+              resizeMode="contain"
+            />
+            <Text style={styles.tagline}>Materials Management Platform</Text>
           </Animated.View>
 
           <Animated.View
@@ -146,23 +139,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     flex: 1,
   },
-  logoStack: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   quvoLogo: {
-    width: 280,
-    height: 160,
+    width: 210,
+    height: 120,
     marginBottom: 25,
-  },
-  mariettaLogo: {
-    width: 200,
-    height: 60,
-    marginBottom: 10,
   },
   tagline: {
     fontSize: 18,
-    color: '#ffffff',
+    color: '#2C3E50',
     fontWeight: '300',
     marginTop: 20,
     letterSpacing: 1,

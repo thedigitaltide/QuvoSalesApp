@@ -1,77 +1,49 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { AuthProvider, useAuth } from './src/context/AuthContext';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { AuthProvider } from './src/context/AuthContext';
 import SplashScreen from './src/screens/SplashScreen';
-import LoginScreen from './src/screens/LoginScreen';
 import EnhancedDashboardScreen from './src/screens/EnhancedDashboardScreen';
 import BayDetailScreen from './src/screens/BayDetailScreen';
 import FacilityDetailScreen from './src/screens/FacilityDetailScreen';
 import PriceManagementScreen from './src/screens/PriceManagementScreen';
 import OrderConfirmationScreen from './src/screens/OrderConfirmationScreen';
-import { ActivityIndicator, View, StyleSheet } from 'react-native';
+import LoginScreen from './src/screens/LoginScreen';
 
 const Stack = createNativeStackNavigator();
 
-const AppNavigator = () => {
-  const { user, loading } = useAuth();
+const App = () => {
   const [showSplash, setShowSplash] = useState(true);
 
-  useEffect(() => {
-    // Hide splash screen after 2.5 seconds
-    const timer = setTimeout(() => {
-      setShowSplash(false);
-    }, 2500);
-
-    return () => clearTimeout(timer);
-  }, []);
-
   if (showSplash) {
-    return <SplashScreen onComplete={() => setShowSplash(false)} />;
-  }
-
-  if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#5bbc9d" />
-      </View>
+      <SafeAreaProvider>
+        <SplashScreen onComplete={() => setShowSplash(false)} />
+      </SafeAreaProvider>
     );
   }
 
   return (
-    <NavigationContainer>
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
-        {user ? (
-          <>
+    <SafeAreaProvider>
+      <AuthProvider>
+        <NavigationContainer>
+          <Stack.Navigator 
+            screenOptions={{ headerShown: false }}
+            initialRouteName="Login"
+          >
+            <Stack.Screen name="Login" component={LoginScreen} />
             <Stack.Screen name="Dashboard" component={EnhancedDashboardScreen} />
             <Stack.Screen name="BayDetail" component={BayDetailScreen} />
             <Stack.Screen name="FacilityDetail" component={FacilityDetailScreen} />
             <Stack.Screen name="PriceManagement" component={PriceManagementScreen} />
             <Stack.Screen name="OrderConfirmation" component={OrderConfirmationScreen} />
-          </>
-        ) : (
-          <Stack.Screen name="Login" component={LoginScreen} />
-        )}
-      </Stack.Navigator>
-    </NavigationContainer>
+          </Stack.Navigator>
+        </NavigationContainer>
+      </AuthProvider>
+    </SafeAreaProvider>
   );
 };
 
-const App = () => {
-  return (
-    <AuthProvider>
-      <AppNavigator />
-    </AuthProvider>
-  );
-};
-
-const styles = StyleSheet.create({
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#f8f9fa',
-  },
-});
 
 export default App;

@@ -1,0 +1,46 @@
+# Snapfile - Configuration for fastlane snapshot (screenshot automation)
+
+# A list of devices to generate screenshots for
+devices([
+  "iPhone 16 Pro Max",
+  "iPhone 16 Pro", 
+  "iPad Pro 13-inch (M4)"
+])
+
+# A list of supported languages
+languages([
+  'en-US'
+])
+
+# Where should the screenshots be stored?
+output_directory("./screenshots")
+
+# Clear previous screenshots before generating new ones
+clear_previous_screenshots(true)
+
+# Should the project be cleaned before building it?
+clean(true)
+
+# Arguments to pass to the app on launch
+# We'll pass CEMEX as the company to ensure CEMEX branding
+launch_arguments([
+  "-company CEMEX"
+])
+
+# The scheme to use
+scheme("QuvoSalesApp")
+
+# The configuration to use
+configuration("Release")
+
+# Skip opening simulator after screenshots
+skip_open_summary(false)
+
+# Stop after first error
+stop_after_first_error(false)
+
+# Reinstall app before taking screenshots  
+reinstall_app(true)
+
+# Erase simulator before taking screenshots
+erase_simulator(true)
